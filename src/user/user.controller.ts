@@ -28,10 +28,11 @@ import { AskAiAssistanceDto } from './dto/ask-ai-assistance.dto';
 @UseGuards(AuthGuard('jwt'))
 export class UserController {
   private readonly baseUrl: string;
+
   constructor(
-    private userService: UserService,
-    private configService: ConfigService,
-    private aiService: AIService,
+    private readonly userService: UserService,
+    private readonly configService: ConfigService,
+    private readonly aiService: AIService,
   ) {
     const baseUrl = this.configService.get<string>('BASE_URL');
     if (!baseUrl) {
@@ -58,6 +59,12 @@ export class UserController {
   }
 
   @Post('weekly-statistic')
+  @ApiOperation({ summary: 'Add weekly user statistics' })
+  @ApiBody({ type: WeeklyStatisticDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Weekly statistic added successfully',
+  })
   async addWeeklyStatistic(
     @Body() data: WeeklyStatisticDto,
     @Request() request,
@@ -66,21 +73,23 @@ export class UserController {
   }
 
   @Get('me')
-  @ApiOperation({ summary: 'Get user data' })
+  @ApiOperation({ summary: 'Get authenticated user data' })
+  @ApiResponse({ status: 200, description: 'User data retrieved successfully' })
   async getMe(@Request() request) {
     return this.userService.getMe(request.user.id);
   }
 
   @Post('ai-assistance')
   @ApiOperation({
-    summary: 'Get AI-generated health advice based on user data',
+    summary:
+      'Get AI-generated health advice based on user data and input query',
   })
   @ApiBody({ type: AskAiAssistanceDto })
   @ApiResponse({
     status: 200,
-    description: 'AI generated hydration and health advice',
+    description: 'AI generated advice returned successfully',
   })
-  async getAiAssistance(@Body() data: AskAiAssistanceDto) {
-    return await this.aiService.askAiAssistance(data);
+  async getAiAssistance(@Body() data: AskAiAssistanceDto, @Request() request) {
+    return this.aiService.askAiAssistance(request.user, data);
   }
 }

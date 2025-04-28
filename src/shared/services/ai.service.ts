@@ -6,53 +6,106 @@ import { AskAiAssistanceDto } from 'src/user/dto/ask-ai-assistance.dto';
 
 @Injectable()
 export class AIService {
-  private client = new OpenAI();
-  constructor(private readonly prisma: PrismaService) {}
-  async getHydration(user: User): Promise<any> {
-    const response = await this.client.responses.create({
-      model: 'gpt-4.1',
-      instructions: `
-        Talk as a personal doctor therapist with over 30 years of expirience.
-        Use user's diseases, body parameters, gender to help you generate your final answer.
-        Give asnwer only in JSON format like this:
-        {
-          "daily_sleep": "10 hours",
-          "daily_water": "2 litres",
-          "recommendation": "You need to sleep more to help improving your health, and drink less water to improve your skin"
-        }
-        `,
-      input: `
-        Diseases: ${user.diseases.join(',')},
-        Gender: ${user.gender},
-        Height: ${user.height},
-        Weight: ${user.weight},
-        Age: ${user.age}
-        `,
-    });
+  private client: OpenAI;
 
-    return response.output_text;
+  constructor(private readonly prisma: PrismaService) {
+    this.client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
   }
 
-  async askAiAssistance(data: AskAiAssistanceDto): Promise<any> {
+  async getHealthAdvice(user: User): Promise<{
+    daily_sleep: string;
+    daily_water: string;
+    recommendation: string;
+  }> {
     try {
       const response = await this.client.chat.completions.create({
-        model: 'gpt-4.1',
+        model: 'gpt-4-turbo',
         messages: [
           {
             role: 'system',
-            content:
-              'You are a highly experienced doctor therapist assisting patients. Provide clear and professional advice.',
+            content: `
+You are a professional doctor therapist with 30+ years of experience.
+Analyze user's diseases, body parameters, and gender to create personal advice.
+Answer strictly in JSON format like this:
+
+{
+  "daily_sleep": "8 hours",
+  "daily_water": "2 liters",
+  "recommendation": "You should increase your sleep duration to boost your immune system."
+}
+          `,
           },
           {
             role: 'user',
-            content: data.query,
+            content: `
+Diseases: ${user.diseases?.join(', ') || 'None'}
+Gender: ${user.gender}
+Height: ${user.height} cm
+Weight: ${user.weight} kg
+Age: ${user.age}
+          `,
           },
         ],
+        temperature: 0.3,
       });
 
-      return response.choices[0].message.content;
+      const text = response.choices[0]?.message?.content;
+
+      if (!text) {
+        throw new Error('Empty AI response');
+      }
+
+      const advice = JSON.parse(text);
+
+      return advice;
     } catch (error) {
-      throw new HttpException('Failed to get AI response', 500);
+      console.error('AIService getHealthAdvice error:', error);
+      throw new HttpException('Failed to get health advice', 500);
+    }
+  }
+
+  async askAiAssistance(user: User, data: AskAiAssistanceDto): Promise<string> {
+    try {
+      const userInfo = `
+User information:
+- Diseases: ${user.diseases?.join(', ') || 'None'}
+- Gender: ${user.gender}
+- Height: ${user.height} cm
+- Weight: ${user.weight} kg
+- Age: ${user.age}
+      `.trim();
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `
+You are an experienced AI assistant therapist with 30+ years of practice.
+You provide advice based on the user's personal medical background and body parameters.
+Always consider the diseases, age, gender, height, and weight of the user before answering.
+Be empathetic, professional, clear, and focused on practical advice.
+          `.trim(),
+          },
+          {
+            role: 'user',
+            content: `
+${userInfo}
+
+User question:
+"${data.query}"
+          `.trim(),
+          },
+        ],
+        temperature: 0.5,
+      });
+
+      return response.choices[0]?.message?.content || 'No response';
+    } catch (error) {
+      console.error('AIService askAiAssistance error:', error);
+      throw new HttpException('Failed to get AI assistance', 500);
     }
   }
 }
