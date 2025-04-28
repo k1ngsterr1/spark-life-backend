@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  Request,
+  Get,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -51,5 +58,11 @@ export class UserController {
     @Request() request,
   ) {
     return this.userService.addWeeklyStatistic(request.user.id, data);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get user data' })
+  async getMe(@Request() request) {
+    return this.userService.getMe(request.user.id);
   }
 }

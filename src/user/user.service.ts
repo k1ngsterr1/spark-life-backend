@@ -135,4 +135,7 @@ export class UserService {
 
     return await bcrypt.compare(password, hashedPassword);
   }
+  async getMe(userId: number) {
+    return await this.prisma.user.findUnique({ where: { id: userId } });
+  }
 }

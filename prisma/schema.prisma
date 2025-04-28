@@ -58,10 +58,11 @@ model Clinic {
   name          String
   owner_id      Int        @unique
   services      Service[]
+  doctors       Doctor[]
   address       String
   city          String
 
-  owner     User      @relation("MyClinic", fields: [owner_id], references: [id])
+  owner         User       @relation("MyClinic", fields: [owner_id], references: [id])
 }
 
 model Service {
@@ -72,6 +73,25 @@ model Service {
   price         Int   
 
   clinic        Clinic    @relation(fields: [clinic_id], references: [id])
+}
+
+model Doctor {
+  id                Int      @id @default(autoincrement())
+  name              String
+  specialty         String
+  photo             String
+  rating            Float
+  review_count      Int
+  experience        String
+  education         String[]
+  languages         String[]
+  clinic_id         String 
+  schedule          Json
+  price             String
+  accepts_insurance String[]
+  about             String
+
+  clinic            Clinic   @relation(fields: [clinic_id], references: [id])
 }
 
 model Notification {
