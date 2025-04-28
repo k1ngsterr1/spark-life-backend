@@ -24,17 +24,51 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Doctors')
 @Controller('doctors')
 @ApiBearerAuth('JWT')
 export class DoctorController {
-  constructor(private readonly doctorService: DoctorService) {}
+  private readonly baseUrl: string;
+  constructor(
+    private readonly doctorService: DoctorService,
+    private readonly configService: ConfigService,
+  ) {
+    const baseUrl = this.configService.get<string>('BASE_URL');
+    if (!baseUrl) {
+      throw new Error('BASE_URL NOT SET IN .ENV');
+    }
+    this.baseUrl = baseUrl;
+  }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new doctor' })
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: diskStorage({
+        destination: './uploads/doctor_photos',
+        filename: (req, file, callback) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `doctor-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Create a new doctor with photo upload' })
   @ApiResponse({ status: 201, description: 'Doctor created' })
-  async create(@Body() createDoctorDto: CreateDoctorDto) {
+  async create(
+    @Body() createDoctorDto: CreateDoctorDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (file) {
+      const baseUrl =
+        this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+      createDoctorDto.photo = `${baseUrl}/uploads/doctor_photos/${file.filename}`;
+    }
     return this.doctorService.create(createDoctorDto);
   }
 
@@ -67,33 +101,5 @@ export class DoctorController {
   @ApiResponse({ status: 200, description: 'Doctor deleted' })
   async remove(@Param('id') id: string) {
     return this.doctorService.remove(+id);
-  }
-
-  @Post('upload-photo')
-  @UseInterceptors(
-    FileInterceptor('photo', {
-      storage: diskStorage({
-        destination: './uploads/doctor_photos', // Папка для загрузки
-        filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          callback(null, `doctor-${uniqueSuffix}${ext}`);
-        },
-      }),
-      limits: { fileSize: 5 * 1024 * 1024 }, // Лимит 5MB
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload doctor photo' })
-  @ApiResponse({ status: 201, description: 'Photo uploaded successfully' })
-  async uploadPhoto(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new Error('No file uploaded');
-    }
-
-    return {
-      path: `/uploads/doctor_photos/${file.filename}`,
-    };
   }
 }

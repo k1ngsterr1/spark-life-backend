@@ -29,8 +29,11 @@ export class UserController {
     private userService: UserService,
     private configService: ConfigService,
   ) {
-    const nodeEnv = this.configService.get<string>('NODE_ENV');
-    this.baseUrl = nodeEnv === 'development' ? 'http://localhost:3000' : '';
+    const baseUrl = this.configService.get<string>('BASE_URL');
+    if (!baseUrl) {
+      throw new Error('BASE_URL NOT SET IN .ENV');
+    }
+    this.baseUrl = baseUrl;
   }
 
   @Post('reset-password')
