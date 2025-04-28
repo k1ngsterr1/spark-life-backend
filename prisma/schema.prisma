@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema file
 
 generator client {
   provider = "prisma-client-js"
@@ -18,6 +14,7 @@ enum Role {
   Owner
   Admin
 }
+
 enum Gender {
   Male
   Female
@@ -25,6 +22,14 @@ enum Gender {
 }
 
 enum NotificationType {
+  medication
+  appointment
+  measurement
+  hydration
+  other
+}
+
+enum RecurrencePattern {
   daily
   weekdays
   weekly
@@ -42,12 +47,12 @@ model User {
   diseases      String[]
   med_doc       String
   role          Role      @default(User)
-  weekly_water  Json?     @default("{}")  
+  weekly_water  Json?     @default("{}")
   weekly_sleep  Json?     @default("{}")
   gender        Gender?   @default(Undefined)
-  age           Int?       
-  height        Decimal?     
-  weight        Decimal?    
+  age           Int?
+  height        Decimal?
+  weight        Decimal?
   
   clinic        Clinic?      @relation("MyClinic")
   notifications Notification[]
@@ -95,11 +100,14 @@ model Doctor {
 }
 
 model Notification {
-  id           Int               @id @default(autoincrement())
-  user_id      Int
-  end_date     String
-  time         String
-  type         NotificationType  @default(daily)
-
-  user         User              @relation(fields: [user_id], references: [id])
+  id                 Int               @id @default(autoincrement())
+  user_id            Int
+  end_date           String
+  time               String
+  type               NotificationType
+  title              String
+  description        String?
+  is_recurring       Boolean?           @default(false)
+  recurrence_pattern RecurrencePattern?
+  user               User               @relation(fields: [user_id], references: [id])
 }

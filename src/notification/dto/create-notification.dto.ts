@@ -1,4 +1,10 @@
-import { IsEnum, IsInt, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsString,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { NotificationType } from '@prisma/client';
 
 export class CreateNotificationDto {
@@ -13,4 +19,19 @@ export class CreateNotificationDto {
 
   @IsEnum(NotificationType)
   type: NotificationType;
+
+  @IsString()
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_recurring?: boolean;
+
+  @IsOptional()
+  @IsString()
+  recurrence_pattern?: string;
 }

@@ -32,6 +32,7 @@ export class AuthService {
     ]);
 
     return {
+      userId: user.id,
       access_token: accessToken,
       refresh_token: refreshToken,
     };
@@ -56,6 +57,7 @@ export class AuthService {
     ]);
 
     return {
+      userId: user.id,
       access_token: accessToken,
       refresh_token: refreshToken,
     };

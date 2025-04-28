@@ -5,6 +5,7 @@ import { NotificationGateway } from './notification.gateway';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { format, isAfter, parse } from 'date-fns';
+import { RecurrencePattern } from '@prisma/client';
 
 @Injectable()
 export class NotificationService {
@@ -15,7 +16,16 @@ export class NotificationService {
 
   async create(createNotificationDto: CreateNotificationDto) {
     return await this.prisma.notification.create({
-      data: createNotificationDto,
+      data: {
+        user_id: createNotificationDto.user_id,
+        end_date: createNotificationDto.end_date,
+        time: createNotificationDto.time,
+        type: createNotificationDto.type,
+        title: createNotificationDto.title,
+        description: createNotificationDto.description,
+        is_recurring: createNotificationDto.is_recurring,
+        recurrence_pattern: createNotificationDto.recurrence_pattern as any,
+      },
     });
   }
 
@@ -45,9 +55,16 @@ export class NotificationService {
   }
 
   async update(id: number, updateNotificationDto: UpdateNotificationDto) {
+    const { user_id, recurrence_pattern, ...rest } = updateNotificationDto;
+
     return await this.prisma.notification.update({
       where: { id },
-      data: updateNotificationDto,
+      data: {
+        ...rest,
+        ...(recurrence_pattern && {
+          recurrence_pattern: recurrence_pattern as RecurrencePattern,
+        }),
+      },
     });
   }
 
