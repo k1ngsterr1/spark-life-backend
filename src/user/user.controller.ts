@@ -75,6 +75,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Get AI-generated health advice based on user data',
   })
+  @ApiBody({ type: AskAiAssistanceDto })
   @ApiResponse({
     status: 200,
     description: 'AI generated hydration and health advice',
