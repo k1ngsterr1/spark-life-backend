@@ -3,6 +3,7 @@ import { User } from '@prisma/client';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -55,6 +56,25 @@ export class UserService {
     return await this.prisma.user.findFirst({
       where: {
         OR: [{ email: identifier }, { phone: identifier }],
+      },
+    });
+  }
+
+  async updateUserProfile(userId: number, data: UpdateUserDto) {
+    return await this.prisma.user.update({
+      where: { id: userId },
+      data: data,
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        first_name: true,
+        last_name: true,
+        patronymic: true,
+        gender: true,
+        age: true,
+        height: true,
+        weight: true,
       },
     });
   }

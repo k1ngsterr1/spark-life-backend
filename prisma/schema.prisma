@@ -18,6 +18,11 @@ enum Role {
   Owner
   Admin
 }
+enum Gender {
+  Male
+  Female
+  Undefined
+}
 
 model User {
   id            Int       @id @default(autoincrement())
@@ -30,6 +35,12 @@ model User {
   diseases      String[]
   med_doc       String
   role          Role      @default(User)
+  weekly_water  Json?     @default("{}")  
+  weekly_sleep  Json?     @default("{}")
+  gender        Gender?   @default(Undefined)
+  age           Int?       
+  height        Decimal?     
+  weight        Decimal?    
   
   clinic     Clinic?      @relation("MyClinic")
 }
