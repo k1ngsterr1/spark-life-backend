@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { PrismaService } from 'src/shared/services/prisma.service';
+import { NotificationGateway } from './notification.gateway';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
-import { PrismaService } from 'src/shared/services/prisma.service';
+import { format, isAfter, parse } from 'date-fns';
 
 @Injectable()
 export class NotificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationGateway: NotificationGateway,
+  ) {}
 
   async create(createNotificationDto: CreateNotificationDto) {
     return await this.prisma.notification.create({
@@ -49,5 +55,61 @@ export class NotificationService {
     return await this.prisma.notification.delete({
       where: { id },
     });
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleNotificationsCron() {
+    const now = new Date();
+    const formattedTime = format(now, 'HH:mm'); // текущее время в формате "HH:mm"
+    const today = format(now, 'dd.MM.yyyy'); // текущее число в формате "dd.MM.yyyy"
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const dayOfMonth = now.getDate(); // 1-31
+
+    const notifications = await this.prisma.notification.findMany({
+      where: {
+        time: formattedTime,
+      },
+    });
+
+    for (const notification of notifications) {
+      const notificationEndDate = parse(
+        notification.end_date,
+        'dd.MM.yyyy',
+        new Date(),
+      );
+
+      // end_date >= today
+      if (
+        isAfter(notificationEndDate, now) ||
+        format(notificationEndDate, 'dd.MM.yyyy') === today
+      ) {
+        if (this.isNotificationDue(notification.type, dayOfWeek, dayOfMonth)) {
+          console.log(`Sending notification to user ${notification.user_id}`);
+          this.notificationGateway.sendNewNotification(
+            notification.user_id,
+            notification,
+          );
+        }
+      }
+    }
+  }
+
+  private isNotificationDue(
+    type: string,
+    dayOfWeek: number,
+    dayOfMonth: number,
+  ): boolean {
+    switch (type) {
+      case 'daily':
+        return true;
+      case 'weekdays':
+        return dayOfWeek >= 1 && dayOfWeek <= 5; // Понедельник-пятница
+      case 'weekly':
+        return dayOfWeek === 1; // Понедельник
+      case 'monthly':
+        return dayOfMonth === 1; // Первое число месяца
+      default:
+        return false;
+    }
   }
 }
