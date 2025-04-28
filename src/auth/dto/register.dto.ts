@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsString, IsEmail, IsArray, IsOptional } from 'class-validator';
 
 export class RegisterDto {
@@ -44,6 +45,16 @@ export class RegisterDto {
   })
   @IsArray()
   @IsString({ each: true })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return [];
+      }
+    }
+    return value;
+  })
   diseases: string[];
 
   @ApiProperty({

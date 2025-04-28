@@ -24,7 +24,7 @@ async function bootstrap() {
       'Accept',
       'Origin',
     ],
-    exposedHeaders: ['Authorization'],
+    credentials: true,
   });
 
   const config = new DocumentBuilder()
