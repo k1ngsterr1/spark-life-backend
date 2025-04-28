@@ -3,6 +3,7 @@ import { PrismaService } from './prisma.service';
 import OpenAI from 'openai';
 import { User } from '@prisma/client';
 import { AskAiAssistanceDto } from 'src/user/dto/ask-ai-assistance.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AIService {
@@ -66,7 +67,15 @@ Age: ${user.age}
     }
   }
 
-  async askAiAssistance(user: User, data: AskAiAssistanceDto): Promise<string> {
+  async askAiAssistance(
+    user: User,
+    data: AskAiAssistanceDto,
+  ): Promise<{
+    id: string;
+    text: string;
+    sender: 'ai';
+    timestamp: Date;
+  }> {
     try {
       const userInfo = `
 User information:
@@ -75,7 +84,7 @@ User information:
 - Height: ${user.height} cm
 - Weight: ${user.weight} kg
 - Age: ${user.age}
-      `.trim();
+    `.trim();
 
       const response = await this.client.chat.completions.create({
         model: 'gpt-4-turbo',
@@ -87,7 +96,7 @@ You are an experienced AI assistant therapist with 30+ years of practice.
 You provide advice based on the user's personal medical background and body parameters.
 Always consider the diseases, age, gender, height, and weight of the user before answering.
 Be empathetic, professional, clear, and focused on practical advice.
-          `.trim(),
+        `.trim(),
           },
           {
             role: 'user',
@@ -96,13 +105,20 @@ ${userInfo}
 
 User question:
 "${data.query}"
-          `.trim(),
+        `.trim(),
           },
         ],
         temperature: 0.5,
       });
 
-      return response.choices[0]?.message?.content || 'No response';
+      const aiText = response.choices[0]?.message?.content || 'No response';
+
+      return {
+        id: uuidv4(), // генерируем уникальный id
+        text: aiText,
+        sender: 'ai',
+        timestamp: new Date(),
+      };
     } catch (error) {
       console.error('AIService askAiAssistance error:', error);
       throw new HttpException('Failed to get AI assistance', 500);

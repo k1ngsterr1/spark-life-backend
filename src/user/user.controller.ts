@@ -82,14 +82,26 @@ export class UserController {
   @Post('ai-assistance')
   @ApiOperation({
     summary:
-      'Get AI-generated health advice based on user data and input query',
+      'Get AI-generated general assistance based on user query and profile',
   })
   @ApiBody({ type: AskAiAssistanceDto })
   @ApiResponse({
     status: 200,
-    description: 'AI generated advice returned successfully',
+    description: 'AI generated general advice based on user query',
   })
   async getAiAssistance(@Body() data: AskAiAssistanceDto, @Request() request) {
     return this.aiService.askAiAssistance(request.user, data);
+  }
+
+  @Get('ai-health-advice')
+  @ApiOperation({
+    summary: 'Get AI-generated health advice based on user profile',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'AI generated personalized health advice',
+  })
+  async getHealthAdvice(@Request() request) {
+    return this.aiService.getHealthAdvice(request.user);
   }
 }
