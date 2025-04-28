@@ -34,7 +34,7 @@ export class NotificationGateway
     @ConnectedSocket() client: Socket,
   ) {
     const room = `user-${userId}`;
-    client.join(room);
+    await client.join(room);
     console.log(`Client ${client.id} joined room ${room}`);
   }
 
