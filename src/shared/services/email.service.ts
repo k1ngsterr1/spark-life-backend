@@ -17,7 +17,11 @@ export class EmailService {
     this.password = EMAIL_PASS;
   }
 
-  async sendChangePasswordEmail(link: string, lang: 'en' | 'ru' | 'kz') {
+  async sendChangePasswordEmail(
+    toEmail: string,
+    link: string,
+    lang: 'en' | 'ru' | 'kz',
+  ) {
     const emailTemplate = this.getEmailTemplate(link, lang);
 
     const transporter = nodemailer.createTransport({
@@ -36,7 +40,7 @@ export class EmailService {
 
     const mailOptions: nodemailer.SendMailOptions = {
       from: this.email,
-      to: this.email, // тут можно поставить реальный получатель
+      to: toEmail,
       subject: this.getSubject(lang),
       html: emailTemplate,
     };
