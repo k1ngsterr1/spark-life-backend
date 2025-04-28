@@ -7,11 +7,13 @@ import { ClinicModule } from './clinic/clinic.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { ServicesModule } from './service/service.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SkinerModule } from './skiner/skiner.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     UserModule,
+    SkinerModule,
     SharedModule,
     AuthModule,
     NotificationModule,
