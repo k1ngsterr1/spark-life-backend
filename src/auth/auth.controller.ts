@@ -19,15 +19,17 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  baseFrontendUrl: string;
+  private readonly baseUrl: string;
 
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
   ) {
-    const nodeEnv = this.configService.get<string>('NODE_ENV');
-    this.baseFrontendUrl =
-      nodeEnv === 'development' ? 'http://localhost:3000' : '';
+    const baseUrl = this.configService.get<string>('BASE_URL');
+    if (!baseUrl) {
+      throw new Error('BASE_URL NOT SET IN .ENV');
+    }
+    this.baseUrl = baseUrl;
   }
 
   @Post('login')
@@ -79,7 +81,7 @@ export class AuthController {
     if (!file) {
       throw new HttpException('Medical document file is required.', 400);
     }
-    data.med_doc = `/uploads/med_docs/${file.filename}`;
+    data.med_doc = `${this.baseUrl}/uploads/med_docs/${file.filename}`;
     const tokens = await this.authService.register(data);
 
     return {
