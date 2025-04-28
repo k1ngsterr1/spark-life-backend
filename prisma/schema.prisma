@@ -24,6 +24,13 @@ enum Gender {
   Undefined
 }
 
+enum NotificationType {
+  daily
+  weekdays
+  weekly
+  monthly
+}
+
 model User {
   id            Int       @id @default(autoincrement())
   email         String    @unique
@@ -42,7 +49,8 @@ model User {
   height        Decimal?     
   weight        Decimal?    
   
-  clinic     Clinic?      @relation("MyClinic")
+  clinic        Clinic?      @relation("MyClinic")
+  notifications Notification[]
 }
 
 model Clinic {
@@ -61,7 +69,17 @@ model Service {
   clinic_id     String
   name          String
   description   String
-  price         Int
+  price         Int   
 
-  clinic     Clinic   @relation(fields: [clinic_id], references: [id])
+  clinic        Clinic    @relation(fields: [clinic_id], references: [id])
+}
+
+model Notification {
+  id           Int               @id @default(autoincrement())
+  user_id      Int
+  end_date     String
+  time         String
+  type         NotificationType  @default(daily)
+
+  user         User              @relation(fields: [user_id], references: [id])
 }
