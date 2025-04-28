@@ -65,7 +65,7 @@ export class CreateDoctorDto {
     example: { days: ['Monday', 'Wednesday'], hours: '9:00-18:00' },
     description: 'Doctor working schedule (days and hours)',
     type: 'object',
-    additionalProperties: true, // <<< это обязательно
+    additionalProperties: true,
   })
   @IsObject()
   schedule: any;
