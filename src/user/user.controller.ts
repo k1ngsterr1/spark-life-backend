@@ -19,15 +19,19 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { WeeklyStatisticDto } from './dto/weekly-statistic.dto';
+import { AIService } from 'src/shared/services/ai.service';
+import { AskAiAssistanceDto } from './dto/ask-ai-assistance.dto';
 
 @ApiTags('User')
 @Controller('user')
 @ApiBearerAuth('JWT')
+@UseGuards(AuthGuard('jwt'))
 export class UserController {
   private readonly baseUrl: string;
   constructor(
     private userService: UserService,
     private configService: ConfigService,
+    private aiService: AIService,
   ) {
     const baseUrl = this.configService.get<string>('BASE_URL');
     if (!baseUrl) {
@@ -37,7 +41,6 @@ export class UserController {
   }
 
   @Post('reset-password')
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Reset password for authenticated user' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({ status: 200, description: 'Password reset successful' })
@@ -47,7 +50,6 @@ export class UserController {
   }
 
   @Post('update-profile')
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update user profile information' })
   @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
@@ -67,5 +69,17 @@ export class UserController {
   @ApiOperation({ summary: 'Get user data' })
   async getMe(@Request() request) {
     return this.userService.getMe(request.user.id);
+  }
+
+  @Post('ai-assistance')
+  @ApiOperation({
+    summary: 'Get AI-generated health advice based on user data',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'AI generated hydration and health advice',
+  })
+  async getAiAssistance(@Body() data: AskAiAssistanceDto) {
+    return await this.aiService.askAiAssistance(data);
   }
 }
