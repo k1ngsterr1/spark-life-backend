@@ -1,9 +1,11 @@
 import { HttpException, Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { WeeklyStatisticDto } from './dto/weekly-statistic.dto';
+import { format, parse } from 'date-fns';
 
 @Injectable()
 export class UserService {
@@ -78,7 +80,50 @@ export class UserService {
       },
     });
   }
+  async addWeeklyStatistic(userId: number, data: WeeklyStatisticDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        weekly_sleep: true,
+        weekly_water: true,
+      },
+    });
 
+    const today = format(new Date(), 'dd.MM.yyyy');
+
+    const sortByDate = (a: { date: string }, b: { date: string }) => {
+      const dateA = parse(a.date, 'dd.MM.yyyy', new Date());
+      const dateB = parse(b.date, 'dd.MM.yyyy', new Date());
+      return dateA.getTime() - dateB.getTime();
+    };
+
+    const sleep_schedule: { date: string; sleep: number }[] = Array.isArray(
+      user.weekly_sleep,
+    )
+      ? (user.weekly_sleep as any)
+      : [];
+
+    const water_schedule: { date: string; water: number }[] = Array.isArray(
+      user.weekly_water,
+    )
+      ? (user.weekly_water as any)
+      : [];
+
+    sleep_schedule.push({ date: today, sleep: data.sleep });
+    water_schedule.push({ date: today, water: data.water });
+
+    const sorted_sleep_schedule = sleep_schedule.sort(sortByDate).slice(-7);
+    const sorted_water_schedule = water_schedule.sort(sortByDate).slice(-7);
+
+    // Обновляем в базе
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        weekly_sleep: sorted_sleep_schedule as Prisma.JsonValue,
+        weekly_water: sorted_water_schedule as Prisma.JsonValue,
+      },
+    });
+  }
   async findAllUsers(): Promise<User[]> {
     return this.prisma.user.findMany();
   }

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { WeeklyStatisticDto } from './dto/weekly-statistic.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -42,5 +43,13 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   async updateProfile(@Body() data: UpdateUserDto, @Request() request) {
     return this.userService.updateUserProfile(request.user.id, data);
+  }
+
+  @Post('weekly-statistic')
+  async addWeeklyStatistic(
+    @Body() data: WeeklyStatisticDto,
+    @Request() request,
+  ) {
+    return this.userService.addWeeklyStatistic(request.user.id, data);
   }
 }

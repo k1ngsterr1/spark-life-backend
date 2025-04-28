@@ -5,7 +5,7 @@ import { User } from '@prisma/client';
 
 @Injectable()
 export class AIService {
-  client = new OpenAI();
+  private client = new OpenAI();
   constructor(private readonly prisma: PrismaService) {}
   async getHydration(user: User): Promise<any> {
     const response = await this.client.responses.create({
