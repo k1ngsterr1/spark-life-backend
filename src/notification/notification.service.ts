@@ -60,36 +60,27 @@ export class NotificationService {
   @Cron(CronExpression.EVERY_MINUTE)
   async handleNotificationsCron() {
     const now = new Date();
-    const formattedTime = format(now, 'HH:mm'); // текущее время в формате "HH:mm"
-    const today = format(now, 'dd.MM.yyyy'); // текущее число в формате "dd.MM.yyyy"
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const formattedTime = format(now, 'HH:mm'); // Текущее время
+    const today = format(now, 'dd.MM.yyyy'); // Сегодня в формате строки
+    const dayOfWeek = now.getDay(); // 0-6
     const dayOfMonth = now.getDate(); // 1-31
 
     const notifications = await this.prisma.notification.findMany({
       where: {
         time: formattedTime,
+        end_date: {
+          gte: today, // Prisma сравнит строки (только если формат строго dd.MM.yyyy!)
+        },
       },
     });
 
     for (const notification of notifications) {
-      const notificationEndDate = parse(
-        notification.end_date,
-        'dd.MM.yyyy',
-        new Date(),
-      );
-
-      // end_date >= today
-      if (
-        isAfter(notificationEndDate, now) ||
-        format(notificationEndDate, 'dd.MM.yyyy') === today
-      ) {
-        if (this.isNotificationDue(notification.type, dayOfWeek, dayOfMonth)) {
-          console.log(`Sending notification to user ${notification.user_id}`);
-          this.notificationGateway.sendNewNotification(
-            notification.user_id,
-            notification,
-          );
-        }
+      if (this.isNotificationDue(notification.type, dayOfWeek, dayOfMonth)) {
+        console.log(`Sending notification to user ${notification.user_id}`);
+        await this.notificationGateway.sendNewNotification(
+          notification.user_id,
+          notification,
+        );
       }
     }
   }

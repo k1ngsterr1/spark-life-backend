@@ -20,16 +20,16 @@ export class NotificationGateway
   @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('subscribeToNotifications')
-  handleSubscribe(
+  async handleSubscribe(
     @MessageBody() userId: number,
     @ConnectedSocket() client: Socket,
   ) {
@@ -38,7 +38,7 @@ export class NotificationGateway
     console.log(`Client ${client.id} joined room ${room}`);
   }
 
-  sendNewNotification(userId: number, notification: any) {
+  async sendNewNotification(userId: number, notification: any) {
     const room = `user-${userId}`;
     this.server.to(room).emit('new-notification', notification);
   }
