@@ -234,7 +234,7 @@ export class UserController {
       : 'en';
     console.log(userLanguage);
     return await this.aiService.getRecommendationServices(
-      request.user.id``,
+      request.user.id,
       userLanguage,
     );
   }
