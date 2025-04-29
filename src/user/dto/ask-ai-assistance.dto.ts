@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsString, IsObject } from 'class-validator';
 
 export class AskAiAssistanceDto {
   @ApiProperty({
@@ -8,4 +8,10 @@ export class AskAiAssistanceDto {
   })
   @IsString()
   query: string;
+
+  @ApiProperty({
+    description: 'User info (any fields)',
+  })
+  @IsObject()
+  user: any;
 }

@@ -89,8 +89,9 @@ export class UserController {
     status: 200,
     description: 'AI generated general advice based on user query',
   })
-  async getAiAssistance(@Body() data: AskAiAssistanceDto, @Request() request) {
-    return this.aiService.askAiAssistance(request.user, data);
+  @Post('/ai-assistance')
+  async askAiAssistance(@Body() dto: any) {
+    return this.aiService.askAiAssistance(dto);
   }
 
   @Get('ai-health-advice')

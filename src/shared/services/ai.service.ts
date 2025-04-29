@@ -67,23 +67,21 @@ Age: ${user.age}
     }
   }
 
-  async askAiAssistance(
-    user: User,
-    data: AskAiAssistanceDto,
-  ): Promise<{
+  async askAiAssistance(data: AskAiAssistanceDto): Promise<{
     id: string;
     text: string;
     sender: 'ai';
     timestamp: Date;
   }> {
     try {
+      const user = data.user;
+
       const userInfo = `
 User information:
-- Diseases: ${user.diseases?.join(', ') || 'None'}
-- Gender: ${user.gender}
-- Height: ${user.height} cm
-- Weight: ${user.weight} kg
-- Age: ${user.age}
+- First Name: ${user.firstName || user.first_name || 'Unknown'}
+- Last Name: ${user.lastName || user.last_name || 'Unknown'}
+- Phone: ${user.phone || 'Unknown'}
+- Email: ${user.email || 'Unknown'}
     `.trim();
 
       const response = await this.client.chat.completions.create({
@@ -93,10 +91,10 @@ User information:
             role: 'system',
             content: `
 You are an experienced AI assistant therapist with 30+ years of practice.
-You provide advice based on the user's personal medical background and body parameters.
-Always consider the diseases, age, gender, height, and weight of the user before answering.
+You provide advice based on the user's personal medical background and contact details.
+Always consider user's name, age, gender, diseases and body parameters if available.
 Be empathetic, professional, clear, and focused on practical advice.
-        `.trim(),
+          `.trim(),
           },
           {
             role: 'user',
@@ -105,7 +103,7 @@ ${userInfo}
 
 User question:
 "${data.query}"
-        `.trim(),
+          `.trim(),
           },
         ],
         temperature: 0.5,
@@ -114,7 +112,7 @@ User question:
       const aiText = response.choices[0]?.message?.content || 'No response';
 
       return {
-        id: uuidv4(), // генерируем уникальный id
+        id: uuidv4(),
         text: aiText,
         sender: 'ai',
         timestamp: new Date(),
