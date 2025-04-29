@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Request,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -52,11 +53,17 @@ export class SkiniverController {
       },
     },
   })
-  async predict(@UploadedFile() file: Express.Multer.File) {
+  @Post('predict')
+  @UseInterceptors(FileInterceptor('img'))
+  async predict(@UploadedFile() file: Express.Multer.File, @Request() req) {
     if (!file) {
       throw new Error('Файл не загружен');
     }
+    const result = await this.skiniverService.predict(file);
 
-    return this.skiniverService.predict(file);
+    // Сохраняем основную информацию в SkinCheck
+    await this.skiniverService.saveSkinCheck(req.user.id, result);
+
+    return { status: 'ok', result };
   }
 }
