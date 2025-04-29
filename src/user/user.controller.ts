@@ -26,6 +26,7 @@ import { AskAiAssistanceDto } from './dto/ask-ai-assistance.dto';
 import { UserAuthGuard } from 'src/shared/guards/user.auth.guard';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { User } from '@prisma/client';
 
 @ApiTags('User')
 @Controller('user')
@@ -169,4 +170,5 @@ export class UserController {
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
+  async getRecomendationServices(user: User) {}
 }

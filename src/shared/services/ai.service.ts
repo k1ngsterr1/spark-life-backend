@@ -149,8 +149,8 @@ User question:
 Ответ строго в формате JSON:
 
 {
-  "daily_sleep": "7-8 часов",
-  "daily_water": "2.5 литра",
+  "daily_sleep": "7-8",
+  "daily_water": "2.5",
   "recommendation": "Рекомендуется увеличить количество выпиваемой воды и нормализовать сон из-за наличия гипертонии и диабета."
 }
         `.trim()
@@ -163,8 +163,8 @@ You are an experienced medical AI assistant. Based on the user's diseases, gende
 Answer strictly in JSON format:
 
 {
-  "daily_sleep": "7-8 hours",
-  "daily_water": "2.5 liters",
+  "daily_sleep": "7-8",
+  "daily_water": "2.5",
   "recommendation": "It is recommended to increase water intake and improve sleep hygiene due to hypertension and diabetes."
 }
         `.trim();
