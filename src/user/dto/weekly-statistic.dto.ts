@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDecimal, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class WeeklyStatisticDto {
@@ -9,7 +9,7 @@ export class WeeklyStatisticDto {
     type: Number,
   })
   @Type(() => Number)
-  @IsDecimal()
+  @IsNumber()
   @IsOptional()
   water: number;
 
@@ -19,7 +19,7 @@ export class WeeklyStatisticDto {
     type: Number,
   })
   @Type(() => Number)
-  @IsDecimal()
+  @IsNumber()
   @IsOptional()
   sleep: number;
 }
