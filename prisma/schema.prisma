@@ -55,8 +55,9 @@ model User {
   clinic          Clinic?         @relation("MyClinic")
   notifications   Notification[]
   skinChecks      SkinCheck[]     
-  anxietyChecks   AnxietyCheck[]  // ⬅️ связь с проверками тревожности
+  anxietyChecks   AnxietyCheck[]  @relation("UserAnxietyChecks") // ⬅️ обратная связь по имени!
 }
+
 
 model SkinCheck {
   id                   Int      @id @default(autoincrement())
@@ -138,12 +139,17 @@ model Notification {
 }
 
 model AnxietyCheck {
-  id             Int      @id @default(autoincrement())
-  user_id        Int
-  answers        String[] // 3 ответа пользователя
-  anxiety_level  Int      // уровень тревожности (0-100)
-  summary        String   // краткое объяснение
-  created_at     DateTime @default(now())
+  id                   Int      @id @default(autoincrement())
+  user_id              Int
+  answers              String[] 
+  anxiety_level        Int
+  stress_level         Int
+  emotional_stability  Int
+  energy_level         Int
+  summary              String
+  created_at           DateTime @default(now())
 
-  user           User     @relation(fields: [user_id], references: [id])
+  user                 User     @relation("UserAnxietyChecks", fields: [user_id], references: [id])
+
+  @@index([user_id])
 }

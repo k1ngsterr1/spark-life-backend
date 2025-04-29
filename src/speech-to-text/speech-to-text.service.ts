@@ -50,11 +50,22 @@ export class SpeechToTextService {
   async analyzeAnxietyLevel(userId: number, answers: string[]): Promise<any> {
     try {
       const prompt = `
-Ты опытный психотерапевт. Проанализируй ответы пользователя на вопросы о его самочувствии. Оцени уровень тревожности по шкале от 0 до 100 и кратко объясни результат. Ответ строго в JSON формате:
+Ты опытный психотерапевт. Проанализируй ответы пользователя на вопросы о самочувствии. Оцени несколько параметров отдельно, по шкале от 0 до 100:
+- anxiety_level (уровень тревожности)
+- stress_level (уровень стресса)
+- emotional_stability (эмоциональная стабильность)
+- energy_level (уровень энергии)
+
+Также напиши общий краткий вывод в поле "summary".
+
+Ответ строго в JSON формате:
 
 {
-  "anxiety_level": 75,
-  "summary": "Повышенная тревожность, связанная с переживаниями о будущем."
+  "anxiety_level": 65,
+  "stress_level": 70,
+  "emotional_stability": 40,
+  "energy_level": 55,
+  "summary": "Умеренная тревожность и высокий стресс. Требуется работа над устойчивостью."
 }
 
 Ответы пользователя:
@@ -85,6 +96,9 @@ export class SpeechToTextService {
           user_id: userId,
           answers,
           anxiety_level: result.anxiety_level,
+          stress_level: result.stress_level,
+          emotional_stability: result.emotional_stability,
+          energy_level: result.energy_level,
           summary: result.summary,
         },
       });
