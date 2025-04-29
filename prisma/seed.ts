@@ -9,11 +9,11 @@ async function main() {
     data: {
       weekly_water: [
         { date: '28.04.2025', water: 2.3 },
-        { date: '27.05.2025', water: 1.8 },
+        { date: '27.04.2025', water: 1.8 },
       ],
       weekly_sleep: [
         { date: '28.04.2025', sleep: 2 },
-        { date: '27.05.2025', sleep: 8 },
+        { date: '27.04.2025', sleep: 8 },
       ],
     },
   });
