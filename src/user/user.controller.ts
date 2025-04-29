@@ -14,6 +14,7 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiOkResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -172,13 +173,16 @@ export class UserController {
     }
   }
 
-  @Get('ai-stats')
+  @Get('ai-recommendation')
   @ApiOperation({
-    summary: 'Get AI-based health advice (sleep hours and water intake)',
+    summary: 'Get AI-based health advice (recommended services)',
     description:
-      "Analyzes user diseases, age, gender, height, weight and returns recommended daily sleep and water intake in user's language (ru/en).",
+      "Analyzes user's diseases and returns suitable medical services in user's language (ru/en).",
   })
   @ApiBearerAuth()
+  @ApiOkResponse({
+    description: 'List of recommended medical services',
+  })
   async getRecomendationServices(@Request() request) {
     const userLanguage = request.headers['accept-language']?.includes('ru')
       ? 'ru'
