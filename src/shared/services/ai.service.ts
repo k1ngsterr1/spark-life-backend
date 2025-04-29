@@ -277,11 +277,15 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
   async getRecommendationServices(userId: number, lang: 'ru' | 'en') {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      const skinCheck = await this.prisma.skinCheck.findMany({
+      const skinCheck = await this.prisma.skinCheck.findFirst({
         where: { user_id: user.id },
+        orderBy: { check_datetime: 'desc' },
       });
-      const anxietyCheck = await this.prisma.anxietyCheck.findMany({
+
+      // Получаем последнюю запись AnxietyCheck
+      const anxietyCheck = await this.prisma.anxietyCheck.findFirst({
         where: { user_id: user.id },
+        orderBy: { created_at: 'desc' },
       });
 
       const services = await this.prisma.service.findMany();
@@ -327,8 +331,6 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       - id (unique service identifier)
       - clinic_id (string — clinic ID)
       - name (service name)
-      - description (service description)
-      - price (integer in KZT)
 
       Strictly follow this structure. Do not include anything outside the JSON array.`;
 
@@ -348,6 +350,7 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
           },
         ],
         temperature: 0.2,
+        max_tokens: 10000,
       });
 
       const aiContent = chatCompletion.choices[0]?.message?.content || '[]';
