@@ -54,10 +54,10 @@ model User {
 
   clinic          Clinic?         @relation("MyClinic")
   notifications   Notification[]
-  skinChecks      SkinCheck[]     
-  anxietyChecks   AnxietyCheck[]  @relation("UserAnxietyChecks") // ⬅️ обратная связь по имени!
+  skinChecks      SkinCheck[]
+  anxietyChecks   AnxietyCheck[]  @relation("UserAnxietyChecks")
+  appointments    Appointment[]   @relation("UserAppointments")
 }
-
 
 model SkinCheck {
   id                   Int      @id @default(autoincrement())
@@ -121,7 +121,8 @@ model Doctor {
   accepts_insurance String[]
   about             String
 
-  clinic            Clinic   @relation(fields: [clinic_id], references: [id])
+  clinic            Clinic    @relation(fields: [clinic_id], references: [id])
+  appointments      Appointment[] @relation("DoctorAppointments")
 }
 
 model Notification {
@@ -134,14 +135,14 @@ model Notification {
   description        String?
   is_recurring       Boolean?           @default(false)
   recurrence_pattern RecurrencePattern?
-  
+
   user               User               @relation(fields: [user_id], references: [id])
 }
 
 model AnxietyCheck {
   id                   Int      @id @default(autoincrement())
   user_id              Int
-  answers              String[] 
+  answers              String[]
   anxiety_level        Int
   stress_level         Int
   emotional_stability  Int
@@ -151,5 +152,19 @@ model AnxietyCheck {
 
   user                 User     @relation("UserAnxietyChecks", fields: [user_id], references: [id])
 
+  @@index([user_id])
+}
+
+model Appointment {
+  id          Int      @id @default(autoincrement())
+  doctor_id   Int
+  user_id     Int
+  date        DateTime
+  description String?
+
+  doctor      Doctor   @relation("DoctorAppointments", fields: [doctor_id], references: [id])
+  user        User     @relation("UserAppointments", fields: [user_id], references: [id])
+
+  @@index([doctor_id])
   @@index([user_id])
 }
