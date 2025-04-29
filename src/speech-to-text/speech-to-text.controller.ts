@@ -4,7 +4,6 @@ import {
   UploadedFiles,
   UseInterceptors,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { SpeechToTextService } from './speech-to-text.service';
@@ -14,17 +13,22 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Request } from 'express';
-import { UserAuthGuard } from 'src/shared/guards/user.auth.guard';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('Speech-to-Text')
 @Controller('speech-to-text')
 export class SpeechToTextController {
-  constructor(private readonly speechService: SpeechToTextService) {}
+  constructor(
+    private readonly speechService: SpeechToTextService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post('analyze-anxiety')
   @UseInterceptors(FilesInterceptor('audios'))
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Analyze user anxiety level based on three answers',
   })
@@ -63,23 +67,29 @@ export class SpeechToTextController {
       throw new Error('Необходимо загрузить ровно 3 аудиофайла с ответами.');
     }
 
-    // Здесь userId, например из авторизации
-    console.log('user', req.user);
-
-    const user = req.user as any; // тебе нужно, чтобы req.user содержал id пользователя через авторизацию
-    console.log('user', user);
-    const userId = user?.sub || user?.id;
-
-    if (!userId) {
-      throw new Error('Не найден пользователь.');
+    // --- Ручная проверка токена без UseGuards ---
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Нет токена авторизации');
     }
 
-    // Транскрибируем каждый файл
+    const token = authHeader.replace('Bearer ', '');
+    const payload = await this.jwtService.verifyAsync(token, {
+      secret: process.env.JWT_ACCESS_SECRET,
+    });
+
+    const userId = payload?.id || payload?.sub;
+
+    if (!userId) {
+      throw new Error('Не найден пользователь в токене');
+    }
+
+    // --- Транскрипция аудиофайлов ---
     const transcribedAnswers = await Promise.all(
       files.map((file) => this.speechService.transcribeAudio(file)),
     );
 
-    // Анализируем уровень тревожности
+    // --- Анализ уровня тревожности ---
     const anxietyResult = await this.speechService.analyzeAnxietyLevel(
       userId,
       transcribedAnswers,
