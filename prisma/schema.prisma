@@ -37,25 +37,50 @@ enum RecurrencePattern {
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  phone         String    @unique
-  first_name    String
-  last_name     String
-  patronymic    String
-  password      String
-  diseases      String[]
-  med_doc       String
-  role          Role      @default(User)
-  weekly_water  Json?     @default("{}")
-  weekly_sleep  Json?     @default("{}")
-  gender        Gender?   @default(Undefined)
-  age           Int?
-  height        Decimal?
-  weight        Decimal?
+  id              Int             @id @default(autoincrement())
+  email           String          @unique
+  phone           String          @unique
+  first_name      String
+  last_name       String
+  patronymic      String
+  password        String
+  diseases        String[]
+  med_doc         String
+  role            Role            @default(User)
+  weekly_water    Json?           @default("{}")
+  weekly_sleep    Json?           @default("{}")
+  gender          Gender?         @default(Undefined)
+  age             Int?
+  height          Decimal?
+  weight          Decimal?
   
-  clinic        Clinic?      @relation("MyClinic")
-  notifications Notification[]
+  clinic          Clinic?         @relation("MyClinic")
+  notifications   Notification[]
+  skinChecks      SkinCheck[]     // Новая связь: Один пользователь может иметь много SkinCheck записей
+}
+
+model SkinCheck {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int
+  check_id             Int
+  check_datetime       DateTime
+  class                String
+  class_raw            String
+  desease              String
+  description          String
+  risk                 String
+  risk_level           String
+  risk_description     String
+  risk_title           String
+  short_recommendation String
+  image_url            String
+  masked_s3_url        String
+  colored_s3_url       String
+  prob                 String
+  uid                  String   @unique
+  atlas_page_link      String
+
+  user                 User     @relation(fields: [user_id], references: [id])
 }
 
 model Clinic {
@@ -109,5 +134,6 @@ model Notification {
   description        String?
   is_recurring       Boolean?           @default(false)
   recurrence_pattern RecurrencePattern?
+  
   user               User               @relation(fields: [user_id], references: [id])
 }
