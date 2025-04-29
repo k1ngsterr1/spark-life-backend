@@ -219,7 +219,7 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
 
       const userDiseases = user.diseases.join(', ') || 'None';
 
-      const servicesJson = JSON.stringify(services, null, 2).slice(0, 8000); // ограничим длину, если нужно
+      const servicesJson = JSON.stringify(services, null, 2); // ограничим длину, если нужно
 
       const prompt =
         lang === 'ru'
