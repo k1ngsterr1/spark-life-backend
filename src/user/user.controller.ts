@@ -5,6 +5,8 @@ import {
   UseGuards,
   Request,
   Get,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -21,6 +23,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { WeeklyStatisticDto } from './dto/weekly-statistic.dto';
 import { AIService } from 'src/shared/services/ai.service';
 import { AskAiAssistanceDto } from './dto/ask-ai-assistance.dto';
+import { UserAuthGuard } from 'src/shared/guards/user.auth.guard';
+import { PrismaService } from 'src/shared/services/prisma.service';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('User')
 @Controller('user')
@@ -32,6 +37,8 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
     private readonly aiService: AIService,
   ) {
     const baseUrl = this.configService.get<string>('BASE_URL');
@@ -104,5 +111,63 @@ export class UserController {
   })
   async getHealthAdvice(@Request() request) {
     return this.aiService.getHealthAdvice(request.user);
+  }
+
+  @Get('ai-stats')
+  @ApiOperation({
+    summary: 'Get AI-based health advice (sleep hours and water intake)',
+    description:
+      "Analyzes user diseases, age, gender, height, weight and returns recommended daily sleep and water intake in user's language (ru/en).",
+  })
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Recommended sleep and water intake based on user profile',
+    schema: {
+      type: 'object',
+      properties: {
+        daily_sleep: { type: 'string', example: '7-8 часов' },
+        daily_water: { type: 'string', example: '2.5 литра' },
+        recommendation: {
+          type: 'string',
+          example:
+            'Рекомендуется увеличить количество воды и нормализовать сон.',
+        },
+      },
+    },
+  })
+  async getAiStats(@Request() request) {
+    try {
+      const authHeader = request.headers.authorization;
+      if (!authHeader) {
+        throw new UnauthorizedException('Authorization header not found');
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_ACCESS_SECRET,
+      });
+
+      if (!payload?.id) {
+        throw new UnauthorizedException('Invalid token payload');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.id },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const userLanguage = request.headers['accept-language']?.includes('ru')
+        ? 'ru'
+        : 'en';
+
+      return this.aiService.aiStats(user, userLanguage);
+    } catch (error) {
+      console.error('getAiStats error:', error.message);
+      throw new UnauthorizedException('Invalid or expired token');
+    }
   }
 }

@@ -122,4 +122,88 @@ User question:
       throw new HttpException('Failed to get AI assistance', 500);
     }
   }
+
+  async aiStats(
+    user: User,
+    userLanguage: 'ru' | 'en' = 'en',
+  ): Promise<{
+    daily_sleep: string;
+    daily_water: string;
+    recommendation: string;
+  }> {
+    try {
+      const diseasesList = user.diseases?.length
+        ? user.diseases.join(', ')
+        : userLanguage === 'ru'
+          ? 'Нет заболеваний'
+          : 'No diseases';
+
+      const systemPrompt =
+        userLanguage === 'ru'
+          ? `
+Ты опытный врач. На основе заболеваний пользователя, его пола, возраста, роста и веса, дай рекомендации:
+- сколько часов сна нужно в день ("daily_sleep")
+- сколько литров воды нужно пить в день ("daily_water")
+- краткое пояснение ("recommendation")
+
+Ответ строго в формате JSON:
+
+{
+  "daily_sleep": "7-8 часов",
+  "daily_water": "2.5 литра",
+  "recommendation": "Рекомендуется увеличить количество выпиваемой воды и нормализовать сон из-за наличия гипертонии и диабета."
+}
+        `.trim()
+          : `
+You are an experienced medical AI assistant. Based on the user's diseases, gender, age, height, and weight, provide health recommendations:
+- How many hours of sleep are needed per day ("daily_sleep")
+- How many liters of water are needed per day ("daily_water")
+- A short explanation ("recommendation")
+
+Answer strictly in JSON format:
+
+{
+  "daily_sleep": "7-8 hours",
+  "daily_water": "2.5 liters",
+  "recommendation": "It is recommended to increase water intake and improve sleep hygiene due to hypertension and diabetes."
+}
+        `.trim();
+
+      const userPrompt = `
+Diseases: ${diseasesList}
+Gender: ${user.gender}
+Age: ${user.age ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown')}
+Height: ${user.height ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown')} cm
+Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown')} kg
+    `.trim();
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        temperature: 0.2,
+      });
+
+      const content = response.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('Empty AI response');
+      }
+
+      const stats = JSON.parse(content);
+
+      return stats;
+    } catch (error) {
+      console.error('AIService aiStats error:', error);
+      throw new HttpException('Failed to get AI stats', 500);
+    }
+  }
 }

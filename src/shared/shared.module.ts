@@ -5,13 +5,13 @@ import { PrismaService } from './services/prisma.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailService } from './services/email.service';
 import { AIService } from './services/ai.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-
     JwtModule,
   ],
   providers: [
