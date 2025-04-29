@@ -163,6 +163,7 @@ export class UserController {
       const userLanguage = request.headers['accept-language']?.includes('ru')
         ? 'ru'
         : 'en';
+      console.log(userLanguage);
 
       return this.aiService.aiStats(user, userLanguage);
     } catch (error) {
@@ -170,5 +171,22 @@ export class UserController {
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
-  async getRecomendationServices(user: User) {}
+
+  @Get('ai-stats')
+  @ApiOperation({
+    summary: 'Get AI-based health advice (sleep hours and water intake)',
+    description:
+      "Analyzes user diseases, age, gender, height, weight and returns recommended daily sleep and water intake in user's language (ru/en).",
+  })
+  @ApiBearerAuth()
+  async getRecomendationServices(@Request() request) {
+    const userLanguage = request.headers['accept-language']?.includes('ru')
+      ? 'ru'
+      : 'en';
+    console.log(userLanguage);
+    return await this.aiService.getRecommendationServices(
+      request.user,
+      userLanguage,
+    );
+  }
 }

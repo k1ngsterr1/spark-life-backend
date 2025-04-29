@@ -206,4 +206,49 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       throw new HttpException('Failed to get AI stats', 500);
     }
   }
+  async getRecommendationServices(user: User, lang: 'ru' | 'en') {
+    try {
+      const userDiseases = user.diseases.join(',') || 'None';
+
+      const prompt =
+        lang === 'ru'
+          ? `У пользователя следующие заболевания: ${userDiseases}. 
+Подскажи, какие услуги или активности могут быть полезны. 
+Не давай диагнозов и не пиши слишком длинный текст. Просто перечисли услуги.`
+          : `The user has the following diseases: ${userDiseases}. 
+Suggest which services or activities could be beneficial. 
+Do not give diagnoses and keep the response short. Just list the services.`;
+
+      const chatCompletion = await this.client.chat.completions.create({
+        model: 'gpt-4.1', // или gpt-3.5-turbo
+        messages: [
+          {
+            role: 'system',
+            content:
+              lang === 'ru'
+                ? 'Ты медицинский консультант. Предлагай полезные услуги на основе заболеваний пользователя.'
+                : 'You are a medical consultant. Suggest useful services based on user diseases.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+      });
+
+      const aiMessage = chatCompletion.choices[0]?.message?.content;
+
+      return [
+        {
+          id: uuidv4(), // генерируем id для ответа
+          title: lang === 'ru' ? 'Рекомендации от AI' : 'AI Recommendations',
+          description: aiMessage || '',
+        },
+      ];
+    } catch (error) {
+      console.error('AIService getRecommendationServices error:', error);
+      throw new HttpException('Failed to get AI recommendations', 500);
+    }
+  }
 }
