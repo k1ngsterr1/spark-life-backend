@@ -67,6 +67,82 @@ Age: ${user.age}
     }
   }
 
+  async processMedicalDocumentFromFile(userId: number, fileBuffer: Buffer) {
+    try {
+      const base64Image = fileBuffer.toString('base64');
+
+      const systemPrompt = `
+Ты — опытный медицинский ИИ. Пользователь загрузил отсканированный документ (медицинская выписка/анализы), закодированный в base64.
+
+Твоя задача:
+- Декодировать изображение
+- Распознать текст (OCR)
+- Извлечь:
+  - Список заболеваний (массив строк)
+  - Рост (в см)
+  - Вес (в кг)
+  - Возраст (в годах)
+
+Ответить строго в формате JSON:
+
+{
+  "diseases": ["гипертония", "сахарный диабет"],
+  "height": 175,
+  "weight": 80,
+  "age": 45
+}
+
+Если данных нет — ставить null.
+Никаких пояснений, только JSON!
+      `.trim();
+
+      const userPrompt = `
+Вот изображение в формате base64:
+
+${base64Image}
+      `.trim();
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 1000,
+      });
+
+      const content = response.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new HttpException('Пустой ответ от AI', 500);
+      }
+
+      let extracted;
+      try {
+        extracted = JSON.parse(content);
+      } catch (err) {
+        console.error('Ошибка разбора ответа:', content);
+        throw new HttpException('AI вернул некорректный JSON', 500);
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          diseases: extracted.diseases || [],
+          height: extracted.height ?? undefined,
+          weight: extracted.weight ?? undefined,
+          age: extracted.age ?? undefined,
+        },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      console.error('Ошибка processMedicalDocumentFromFile:', error);
+      throw new HttpException('Ошибка обработки мед.документа', 500);
+    }
+  }
+
   async askAiAssistance(data: AskAiAssistanceDto): Promise<{
     id: string;
     text: string;
