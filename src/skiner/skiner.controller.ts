@@ -61,7 +61,6 @@ export class SkiniverController {
     }
     const result = await this.skiniverService.predict(file);
 
-    // Сохраняем основную информацию в SkinCheck
     await this.skiniverService.saveSkinCheck(req.user.id, result);
 
     return { status: 'ok', result };
