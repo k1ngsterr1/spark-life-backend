@@ -208,44 +208,74 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
   }
   async getRecommendationServices(user: User, lang: 'ru' | 'en') {
     try {
-      const userDiseases = user.diseases.join(',') || 'None';
+      const services = await this.prisma.service.findMany({
+        select: {
+          clinic_id: true,
+          name: true,
+          description: true,
+          price: true,
+        },
+      });
+
+      const userDiseases = user.diseases.join(', ') || 'None';
+
+      const servicesJson = JSON.stringify(services, null, 2).slice(0, 8000); // ограничим длину, если нужно
 
       const prompt =
         lang === 'ru'
-          ? `У пользователя следующие заболевания: ${userDiseases}. 
-Подскажи, какие услуги или активности могут быть полезны. 
-Не давай диагнозов и не пиши слишком длинный текст. Просто перечисли услуги.`
-          : `The user has the following diseases: ${userDiseases}. 
-Suggest which services or activities could be beneficial. 
-Do not give diagnoses and keep the response short. Just list the services.`;
+          ? `У пользователя следующие заболевания: ${userDiseases}.
+Вот список всех доступных услуг (выбирай только из них, не выдумывай новые):
+${servicesJson}
+
+Выбери из них только те, которые подходят пользователю. Верни результат в формате JSON массива, где каждый объект содержит:
+- clinic_id (строка),
+- name (название услуги),
+- description (описание),
+- price (целое число в тенге).
+
+Не добавляй ничего вне JSON.`
+          : `The user has the following diseases: ${userDiseases}.
+Here is the list of all available services (only choose from this list, do not invent new ones):
+${servicesJson}
+
+Select only those that are suitable for the user. Return the result as a JSON array where each object contains:
+- clinic_id (string),
+- name (service name),
+- description,
+- price (integer in KZT).
+
+Do not include anything outside the JSON array.`;
 
       const chatCompletion = await this.client.chat.completions.create({
-        model: 'gpt-4.1', // или gpt-3.5-turbo
+        model: 'gpt-4.1',
         messages: [
           {
             role: 'system',
             content:
               lang === 'ru'
-                ? 'Ты медицинский консультант. Предлагай полезные услуги на основе заболеваний пользователя.'
-                : 'You are a medical consultant. Suggest useful services based on user diseases.',
+                ? 'Ты медицинский ассистент. Отвечай строго в формате JSON.'
+                : 'You are a medical assistant. Respond strictly in JSON format.',
           },
           {
             role: 'user',
             content: prompt,
           },
         ],
-        temperature: 0.7,
+        temperature: 0.2,
       });
 
-      const aiMessage = chatCompletion.choices[0]?.message?.content;
+      const aiContent = chatCompletion.choices[0]?.message?.content || '[]';
 
-      return [
-        {
-          id: uuidv4(), // генерируем id для ответа
-          title: lang === 'ru' ? 'Рекомендации от AI' : 'AI Recommendations',
-          description: aiMessage || '',
-        },
-      ];
+      let parsed: any[] = [];
+
+      try {
+        parsed = JSON.parse(aiContent);
+      } catch (jsonError) {
+        console.error('Failed to parse AI response as JSON:', aiContent);
+        throw new HttpException('AI response was not a valid JSON array', 500);
+      }
+
+      return parsed;
     } catch (error) {
       console.error('AIService getRecommendationServices error:', error);
       throw new HttpException('Failed to get AI recommendations', 500);
