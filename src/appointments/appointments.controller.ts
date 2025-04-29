@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
@@ -16,6 +17,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AppointmentService } from './appointments.service';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Appointments')
 @Controller('appointments')
@@ -52,6 +54,17 @@ export class AppointmentController {
     @Body() updateAppointmentDto: UpdateAppointmentDto,
   ) {
     return this.appointmentService.update(+id, updateAppointmentDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Get appointments by user ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of appointments for the user',
+  })
+  async findByUserId(@Param('userId') userId: string) {
+    return this.appointmentService.findByUserId(+userId);
   }
 
   @Delete(':id')
