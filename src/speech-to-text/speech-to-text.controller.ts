@@ -4,6 +4,7 @@ import {
   UploadedFiles,
   UseInterceptors,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { SpeechToTextService } from './speech-to-text.service';
@@ -15,12 +16,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import { UserAuthGuard } from 'src/shared/guards/user.auth.guard';
 
 @ApiTags('Speech-to-Text')
 @Controller('speech-to-text')
 export class SpeechToTextController {
   constructor(private readonly speechService: SpeechToTextService) {}
 
+  @UseGuards(UserAuthGuard)
   @Post('analyze-anxiety')
   @UseInterceptors(FilesInterceptor('audios'))
   @ApiOperation({
@@ -63,7 +66,7 @@ export class SpeechToTextController {
 
     // Здесь userId, например из авторизации
     const user = req.user as any; // тебе нужно, чтобы req.user содержал id пользователя через авторизацию
-    const userId = user?.id;
+    const userId = user?.sub;
 
     if (!userId) {
       throw new Error('Не найден пользователь.');
