@@ -23,7 +23,6 @@ import { UserAuthGuard } from 'src/shared/guards/user.auth.guard';
 export class SpeechToTextController {
   constructor(private readonly speechService: SpeechToTextService) {}
 
-  @UseGuards(UserAuthGuard)
   @Post('analyze-anxiety')
   @UseInterceptors(FilesInterceptor('audios'))
   @ApiOperation({
