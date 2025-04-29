@@ -110,11 +110,25 @@ export class UserService {
       : [];
 
     if (data.sleep !== undefined) {
-      sleep_schedule.push({ date: today, sleep: data.sleep });
+      const existingSleep = sleep_schedule.find(
+        (entry) => entry.date === today,
+      );
+      if (existingSleep) {
+        existingSleep.sleep = data.sleep; // ПЕРЕЗАПИСЫВАЕМ sleep на сегодня
+      } else {
+        sleep_schedule.push({ date: today, sleep: data.sleep });
+      }
     }
 
     if (data.water !== undefined) {
-      water_schedule.push({ date: today, water: data.water });
+      const existingWater = water_schedule.find(
+        (entry) => entry.date === today,
+      );
+      if (existingWater) {
+        existingWater.water = data.water; // ПЕРЕЗАПИСЫВАЕМ water на сегодня
+      } else {
+        water_schedule.push({ date: today, water: data.water });
+      }
     }
 
     const sorted_sleep_schedule = sleep_schedule.sort(sortByDate).slice(-7);
@@ -128,6 +142,7 @@ export class UserService {
       },
     });
   }
+
   async findAllUsers(): Promise<User[]> {
     return this.prisma.user.findMany();
   }
