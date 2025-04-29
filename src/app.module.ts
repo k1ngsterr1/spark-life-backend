@@ -8,11 +8,13 @@ import { DoctorModule } from './doctor/doctor.module';
 import { ServicesModule } from './service/service.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SkinerModule } from './skiner/skiner.module';
+import { SpeechToTextModule } from './speech-to-text/speech-to-text.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     UserModule,
+    SpeechToTextModule,
     SkinerModule,
     SharedModule,
     AuthModule,
@@ -20,6 +22,7 @@ import { SkinerModule } from './skiner/skiner.module';
     ClinicModule,
     ServicesModule,
     DoctorModule,
+    SpeechToTextModule,
   ],
 })
 export class AppModule {}
