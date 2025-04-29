@@ -49,6 +49,16 @@ export class AppointmentService {
     });
   }
 
+  async findByUserId(userId: number) {
+    return this.prisma.appointment.findMany({
+      where: { user_id: userId },
+      include: {
+        doctor: true,
+        user: true,
+      },
+    });
+  }
+
   async remove(id: number) {
     return this.prisma.appointment.delete({
       where: { id },
