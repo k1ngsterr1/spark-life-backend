@@ -3,6 +3,7 @@ import {
   Post,
   Request,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -13,15 +14,19 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Express } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Skiniver')
 @Controller('skiniver')
+@ApiBearerAuth('JWT')
 export class SkiniverController {
   constructor(private readonly skiniverService: SkiniverService) {}
 
   @Post('predict')
+  @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(FileInterceptor('img'))
   @ApiOperation({ summary: 'Predict skin condition by uploaded image' })
   @ApiConsumes('multipart/form-data')
@@ -53,8 +58,6 @@ export class SkiniverController {
       },
     },
   })
-  @Post('predict')
-  @UseInterceptors(FileInterceptor('img'))
   async predict(@UploadedFile() file: Express.Multer.File, @Request() req) {
     if (!file) {
       throw new Error('Файл не загружен');
