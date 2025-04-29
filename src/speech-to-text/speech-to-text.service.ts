@@ -51,28 +51,19 @@ export class SpeechToTextService {
     try {
       const prompt = `
 Ты опытный психотерапевт. Проанализируй ответы пользователя на вопросы о самочувствии. Оцени несколько параметров отдельно, по шкале от 0 до 100:
-- anxiety_level (уровень тревожности)
-- stress_level (уровень стресса)
-- emotional_stability (эмоциональная стабильность)
-- energy_level (уровень энергии)
+- anxiety_level
+- stress_level
+- emotional_stability
+- energy_level
+И сделай общий вывод (summary).
 
-Также напиши общий краткий вывод в поле "summary".
-
-Ответ строго в JSON формате:
-
-{
-  "anxiety_level": 65,
-  "stress_level": 70,
-  "emotional_stability": 40,
-  "energy_level": 55,
-  "summary": "Умеренная тревожность и высокий стресс. Требуется работа над устойчивостью."
-}
+Ответ строго в JSON формате без комментариев.
 
 Ответы пользователя:
 1. ${answers[0]}
 2. ${answers[1]}
 3. ${answers[2]}
-      `;
+    `;
 
       const response = await this.client.chat.completions.create({
         model: 'gpt-4-turbo',
@@ -83,14 +74,19 @@ export class SpeechToTextService {
         temperature: 0.3,
       });
 
-      const content = response.choices[0]?.message?.content;
+      let content = response.choices[0]?.message?.content;
+
       if (!content) {
         throw new Error('Empty AI response');
       }
 
+      // 🔥 Удаляем обертки ```json или ``` просто
+      content = content.replace(/```json|```/g, '').trim();
+
+      console.log('🧠 Cleaned OpenAI answer:', content);
+
       const result = JSON.parse(content);
 
-      // Сохраняем в базу
       await this.prisma.anxietyCheck.create({
         data: {
           user_id: userId,
