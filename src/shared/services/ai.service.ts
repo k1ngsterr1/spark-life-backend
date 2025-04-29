@@ -277,6 +277,13 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
   async getRecommendationServices(userId: number, lang: 'ru' | 'en') {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const skinCheck = await this.prisma.skinCheck.findMany({
+        where: { user_id: user.id },
+      });
+      const anxietyCheck = await this.prisma.anxietyCheck.findMany({
+        where: { user_id: user.id },
+      });
+
       const services = await this.prisma.service.findMany({
         select: {
           clinic_id: true,
@@ -290,12 +297,17 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       const userDiseases = user.diseases.join(', ') || 'None';
 
       const servicesJson = JSON.stringify(services, null, 2); // ограничим длину, если нужно
+      const skinJson = JSON.stringify(skinCheck, null, 2);
+      const anxietyJson = JSON.stringify(anxietyCheck, null, 2);
 
       const prompt =
         lang === 'ru'
           ? `У пользователя следующие заболевания: ${userDiseases}.
 Вот список всех доступных услуг (выбирай только из них, не выдумывай новые):
-${servicesJson}
+${servicesJson},
+Также учитывай оценку кожи и психологическую состовляющую у пользователя для того чтобы подобрать более качественно сервисы для пользователя:
+Кожа: ${skinJson},
+Психологические данные: ${anxietyJson}
 
 Выбери из них только те, которые подходят пользователю. Верни результат в формате JSON массива, где каждый объект содержит:
 - clinic_id (строка),
@@ -306,7 +318,10 @@ ${servicesJson}
 Не добавляй ничего вне JSON.`
           : `The user has the following diseases: ${userDiseases}.
 Here is the list of all available services (only choose from this list, do not invent new ones):
-${servicesJson}
+${servicesJson},
+Also take into account the user's skin condition and psychological aspects in order to select services more accurately for the user:
+Skin: ${skinJson},
+Psychological data: ${anxietyJson}
 
 Select only those that are suitable for the user. Return the result as a JSON array where each object contains:
 - clinic_id (string),
