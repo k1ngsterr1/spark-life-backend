@@ -1,23 +1,25 @@
 import { Type } from 'class-transformer';
-import { IsDecimal } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsDecimal, IsOptional } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class WeeklyStatisticDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Количество выпитой воды в литрах за день',
     example: 2.5,
     type: Number,
   })
   @Type(() => Number)
   @IsDecimal()
+  @IsOptional()
   water: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Количество часов сна за сегодня',
     example: 9,
     type: Number,
   })
   @Type(() => Number)
   @IsDecimal()
+  @IsOptional()
   sleep: number;
 }
