@@ -1,49 +1,95 @@
-// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const services = await prisma.service.findMany();
-  const doctors = await prisma.doctor.findMany();
+  const services = await prisma.service.findMany({
+    include: { doctors: true },
+  });
+  const clinics = await prisma.clinic.findMany();
 
-  // Карта соответствий специальностей к услугам
-  const specialtyServiceMap: { [key: string]: string[] } = {
-    Кардиолог: ['Приём кардиолога', 'Кардиологический скрининг', 'УЗИ сердца'],
-    Дерматолог: ['Приём дерматолога', 'Удаление родинок', 'Лазерная терапия'],
-    Педиатр: ['Детский приём', 'Иммунизация детей', 'Школьный медосмотр'],
-    Ортопед: ['Ортопедический осмотр', 'Восстановление после травм'],
-    Невролог: ['Приём невролога', 'ЭЭГ', 'Терапия боли'],
-    Гинеколог: ['Гинекологический осмотр', 'Пренатальный осмотр'],
-    Психотерапевт: ['Психотерапевтическая консультация', 'Лечение депрессии'],
-    Офтальмолог: ['Осмотр офтальмолога', 'Проверка зрения'],
-    Терапевт: ['Общий медосмотр', 'Функциональная диагностика'],
-    Стоматолог: [
-      'Чистка зубов',
-      'Удаление зубов',
-      'Лечение кариеса',
-      'Ортодонтическая консультация',
-    ],
-  };
+  const specialties = [
+    'Кардиолог',
+    'Дерматолог',
+    'Педиатр',
+    'Ортопед',
+    'Невролог',
+    'Гинеколог',
+    'Психотерапевт',
+    'Офтальмолог',
+    'Терапевт',
+    'Стоматолог',
+  ];
+  const firstNames = [
+    'Иван',
+    'Анна',
+    'Олег',
+    'Мария',
+    'Дмитрий',
+    'Елена',
+    'Алексей',
+    'Наталья',
+    'Сергей',
+    'Оксана',
+  ];
+  const lastNames = [
+    'Иванов',
+    'Петрова',
+    'Сидоров',
+    'Кузнецова',
+    'Попов',
+    'Соколова',
+    'Морозов',
+    'Лебедева',
+    'Волков',
+    'Федорова',
+  ];
 
-  // Проходим по каждому доктору
-  for (const doctor of doctors) {
-    const matchedServiceNames = specialtyServiceMap[doctor.specialty] || [];
+  for (const service of services) {
+    if (service.doctors.length === 0) {
+      console.log(`Создаём врача для услуги: ${service.name}`);
 
-    // Находим услуги по именам
-    const matchedServices = services.filter((service) =>
-      matchedServiceNames.includes(service.name),
-    );
+      const randomFirstName =
+        firstNames[Math.floor(Math.random() * firstNames.length)];
+      const randomLastName =
+        lastNames[Math.floor(Math.random() * lastNames.length)];
+      const randomSpecialty =
+        specialties[Math.floor(Math.random() * specialties.length)];
+      const randomClinic = clinics[Math.floor(Math.random() * clinics.length)];
 
-    if (matchedServices.length > 0) {
-      await prisma.doctor.update({
-        where: { id: doctor.id },
+      // Создать нового доктора
+      const newDoctor = await prisma.doctor.create({
         data: {
+          name: `${randomFirstName} ${randomLastName}`,
+          specialty: randomSpecialty,
+          photo: `https://randomuser.me/api/portraits/men/${Math.floor(Math.random() * 99)}.jpg`,
+          rating: parseFloat((Math.random() * 2 + 3).toFixed(1)), // 3.0 - 5.0
+          review_count: Math.floor(Math.random() * 100),
+          experience: `${Math.floor(Math.random() * 40) + 1} лет`,
+          education: ['МГУ им. Ломоносова', 'СПбГМУ им. Павлова'],
+          languages: ['Русский', 'Английский'],
+          clinic_id: randomClinic.id,
+          schedule: {
+            Понедельник: '09:00-17:00',
+            Вторник: '09:00-17:00',
+            Среда: '09:00-17:00',
+            Четверг: '09:00-17:00',
+            Пятница: '09:00-16:00',
+            Суббота: 'Выходной',
+            Воскресенье: 'Выходной',
+          },
+          price: `${Math.floor(Math.random() * 4000) + 1000} руб.`,
+          accepts_insurance: ['ВТБ', 'Согаз', 'Ингосстрах'],
+          about: `Доктор ${randomFirstName} ${randomLastName} — опытный специалист.`,
           services: {
-            connect: matchedServices.map((service) => ({ id: service.id })),
+            connect: { id: service.id },
           },
         },
       });
+
+      console.log(
+        `Создан доктор ${newDoctor.name} и привязан к услуге ${service.name}`,
+      );
     }
   }
 }

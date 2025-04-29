@@ -284,11 +284,9 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
         where: { user_id: user.id },
       });
 
-      const services = await this.prisma.service.findMany({
-        include: {
-          clinic: true,
-          doctors: true,
-        },
+      const services = await this.prisma.service.findMany();
+      const services_full = await this.prisma.service.findMany({
+        include: { clinic: true, doctors: true },
       });
 
       const userDiseases = user.diseases.join(', ') || 'None';
@@ -366,7 +364,7 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       const selectedIds = parsedIds.map((item) => item.id);
 
       // Фильтруем те сервисы, которые соответствуют выбранным ID
-      const recommendedServices = services.filter((service) =>
+      const recommendedServices = services_full.filter((service) =>
         selectedIds.includes(service.id),
       );
 
