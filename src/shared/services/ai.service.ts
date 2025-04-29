@@ -285,11 +285,9 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       });
 
       const services = await this.prisma.service.findMany({
-        select: {
-          clinic_id: true,
-          name: true,
-          description: true,
-          price: true,
+        include: {
+          clinic: true,
+          doctors: true,
         },
       });
       console.log(user.diseases);
