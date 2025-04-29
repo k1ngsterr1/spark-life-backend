@@ -67,7 +67,8 @@ export class SpeechToTextController {
     console.log('user', req.user);
 
     const user = req.user as any; // тебе нужно, чтобы req.user содержал id пользователя через авторизацию
-    const userId = user?.sub || user.id;
+    console.log('user', user);
+    const userId = user?.sub || user?.id;
 
     if (!userId) {
       throw new Error('Не найден пользователь.');
