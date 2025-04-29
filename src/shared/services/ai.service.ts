@@ -67,6 +67,74 @@ Age: ${user.age}
     }
   }
 
+  async processMedicalDocumentFromUrl(userId: number, imageUrl: string) {
+    console.log('🚀 Обработка документа с image_url:', imageUrl);
+
+    const prompt = `
+Ты — опытный медицинский ИИ. Пользователь загрузил медицинский документ.
+
+Извлеки из изображения:
+- список заболеваний (массив строк)
+- рост в см
+- вес в кг
+- возраст
+
+Ответ в JSON:
+{
+  "diseases": ["..."],
+  "height": 170,
+  "weight": 70,
+  "age": 40
+}
+
+Если чего-то нет — ставь null. Только JSON, без пояснений!
+`.trim();
+
+    const response = await this.client.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: { url: imageUrl },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1000,
+      temperature: 0.2,
+    });
+
+    const content = response.choices[0]?.message?.content;
+
+    if (!content) throw new HttpException('Пустой ответ от AI', 500);
+
+    let extracted;
+    try {
+      extracted = JSON.parse(content);
+      console.log('✅ AI JSON:', extracted);
+    } catch (err) {
+      console.error('❌ Ошибка парсинга:', content);
+      throw new HttpException('AI вернул некорректный JSON', 500);
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        diseases: extracted.diseases || [],
+        height: extracted.height ?? undefined,
+        weight: extracted.weight ?? undefined,
+        age: extracted.age ?? undefined,
+      },
+    });
+
+    console.log('🎉 Пользователь обновлён:', updatedUser.id);
+    return updatedUser;
+  }
+
   async askAiAssistance(data: AskAiAssistanceDto): Promise<{
     id: string;
     text: string;

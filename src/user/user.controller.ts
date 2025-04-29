@@ -5,8 +5,11 @@ import {
   UseGuards,
   Request,
   Get,
-  Req,
   UnauthorizedException,
+  Param,
+  UploadedFile,
+  HttpException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -14,8 +17,9 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiOkResponse,
+  ApiConsumes,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -24,10 +28,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { WeeklyStatisticDto } from './dto/weekly-statistic.dto';
 import { AIService } from 'src/shared/services/ai.service';
 import { AskAiAssistanceDto } from './dto/ask-ai-assistance.dto';
-import { UserAuthGuard } from 'src/shared/guards/user.auth.guard';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '@prisma/client';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @ApiTags('User')
 @Controller('user')
@@ -48,6 +53,49 @@ export class UserController {
       throw new Error('BASE_URL NOT SET IN .ENV');
     }
     this.baseUrl = baseUrl;
+  }
+
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads', // локальная папка
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `med-doc-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  @Post(':userId/upload-medical-document')
+  @ApiOperation({ summary: 'Распознать мед.документ через OCR (Vision)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'userId', required: true })
+  @ApiBody({
+    description: 'Медицинский документ',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Профиль обновлен' })
+  @ApiBearerAuth()
+  async uploadMedicalDocument(
+    @Param('userId') userId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new HttpException('Файл не был загружен', 400);
+    }
+
+    const imageUrl = `${process.env.BASE_URL}/uploads/${file.filename}`;
+    return this.aiService.processMedicalDocumentFromUrl(+userId, imageUrl);
   }
 
   @Post('reset-password')
@@ -173,16 +221,13 @@ export class UserController {
     }
   }
 
-  @Get('ai-recommendation')
+  @Get('ai-stats')
   @ApiOperation({
-    summary: 'Get AI-based health advice (recommended services)',
+    summary: 'Get AI-based health advice (sleep hours and water intake)',
     description:
-      "Analyzes user's diseases and returns suitable medical services in user's language (ru/en).",
+      "Analyzes user diseases, age, gender, height, weight and returns recommended daily sleep and water intake in user's language (ru/en).",
   })
   @ApiBearerAuth()
-  @ApiOkResponse({
-    description: 'List of recommended medical services',
-  })
   async getRecomendationServices(@Request() request) {
     const userLanguage = request.headers['accept-language']?.includes('ru')
       ? 'ru'
