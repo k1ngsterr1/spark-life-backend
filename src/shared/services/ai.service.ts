@@ -67,80 +67,72 @@ Age: ${user.age}
     }
   }
 
-  async processMedicalDocumentFromFile(userId: number, fileBuffer: Buffer) {
-    try {
-      const base64Image = fileBuffer.toString('base64');
+  async processMedicalDocumentFromUrl(userId: number, imageUrl: string) {
+    console.log('🚀 Обработка документа с image_url:', imageUrl);
 
-      const systemPrompt = `
-Ты — опытный медицинский ИИ. Пользователь загрузил отсканированный документ (медицинская выписка/анализы), закодированный в base64.
+    const prompt = `
+Ты — опытный медицинский ИИ. Пользователь загрузил медицинский документ.
 
-Твоя задача:
-- Декодировать изображение
-- Распознать текст (OCR)
-- Извлечь:
-  - Список заболеваний (массив строк)
-  - Рост (в см)
-  - Вес (в кг)
-  - Возраст (в годах)
+Извлеки из изображения:
+- список заболеваний (массив строк)
+- рост в см
+- вес в кг
+- возраст
 
-Ответить строго в формате JSON:
-
+Ответ в JSON:
 {
-  "diseases": ["гипертония", "сахарный диабет"],
-  "height": 175,
-  "weight": 80,
-  "age": 45
+  "diseases": ["..."],
+  "height": 170,
+  "weight": 70,
+  "age": 40
 }
 
-Если данных нет — ставить null.
-Никаких пояснений, только JSON!
-      `.trim();
+Если чего-то нет — ставь null. Только JSON, без пояснений!
+`.trim();
 
-      const userPrompt = `
-Вот изображение в формате base64:
-
-${base64Image}
-      `.trim();
-
-      const response = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.2,
-        max_tokens: 1000,
-      });
-
-      const content = response.choices[0]?.message?.content;
-
-      if (!content) {
-        throw new HttpException('Пустой ответ от AI', 500);
-      }
-
-      let extracted;
-      try {
-        extracted = JSON.parse(content);
-      } catch (err) {
-        console.error('Ошибка разбора ответа:', content);
-        throw new HttpException('AI вернул некорректный JSON', 500);
-      }
-
-      const updatedUser = await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          diseases: extracted.diseases || [],
-          height: extracted.height ?? undefined,
-          weight: extracted.weight ?? undefined,
-          age: extracted.age ?? undefined,
+    const response = await this.client.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: { url: imageUrl },
+            },
+          ],
         },
-      });
+      ],
+      max_tokens: 1000,
+      temperature: 0.2,
+    });
 
-      return updatedUser;
-    } catch (error) {
-      console.error('Ошибка processMedicalDocumentFromFile:', error);
-      throw new HttpException('Ошибка обработки мед.документа', 500);
+    const content = response.choices[0]?.message?.content;
+
+    if (!content) throw new HttpException('Пустой ответ от AI', 500);
+
+    let extracted;
+    try {
+      extracted = JSON.parse(content);
+      console.log('✅ AI JSON:', extracted);
+    } catch (err) {
+      console.error('❌ Ошибка парсинга:', content);
+      throw new HttpException('AI вернул некорректный JSON', 500);
     }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        diseases: extracted.diseases || [],
+        height: extracted.height ?? undefined,
+        weight: extracted.weight ?? undefined,
+        age: extracted.age ?? undefined,
+      },
+    });
+
+    console.log('🎉 Пользователь обновлён:', updatedUser.id);
+    return updatedUser;
   }
 
   async askAiAssistance(data: AskAiAssistanceDto): Promise<{

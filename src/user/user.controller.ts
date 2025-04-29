@@ -31,6 +31,8 @@ import { AskAiAssistanceDto } from './dto/ask-ai-assistance.dto';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @ApiTags('User')
 @Controller('user')
@@ -52,10 +54,22 @@ export class UserController {
     }
     this.baseUrl = baseUrl;
   }
+
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads', // локальная папка
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `med-doc-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
   @Post(':userId/upload-medical-document')
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Распознать мед.документ через OCR (без облака)' })
+  @ApiOperation({ summary: 'Распознать мед.документ через OCR (Vision)' })
   @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'userId', required: true })
   @ApiBody({
@@ -71,7 +85,7 @@ export class UserController {
     },
   })
   @ApiResponse({ status: 200, description: 'Профиль обновлен' })
-  @ApiResponse({ status: 400, description: 'Файл отсутствует' })
+  @ApiBearerAuth()
   async uploadMedicalDocument(
     @Param('userId') userId: string,
     @UploadedFile() file: Express.Multer.File,
@@ -80,12 +94,8 @@ export class UserController {
       throw new HttpException('Файл не был загружен', 400);
     }
 
-    const updatedUser = await this.aiService.processMedicalDocumentFromFile(
-      +userId,
-      file.buffer,
-    );
-
-    return updatedUser;
+    const imageUrl = `${process.env.BASE_URL}/uploads/${file.filename}`;
+    return this.aiService.processMedicalDocumentFromUrl(+userId, imageUrl);
   }
 
   @Post('reset-password')
