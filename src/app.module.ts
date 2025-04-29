@@ -10,6 +10,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SkinerModule } from './skiner/skiner.module';
 import { SpeechToTextModule } from './speech-to-text/speech-to-text.module';
 import { AppointmentModule } from './appointments/appointments.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -25,6 +27,10 @@ import { AppointmentModule } from './appointments/appointments.module';
     ServicesModule,
     DoctorModule,
     SpeechToTextModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads', // Путь в URL
+    }),
   ],
 })
 export class AppModule {}
