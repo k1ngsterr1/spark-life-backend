@@ -1,5 +1,3 @@
-// Prisma schema file
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -53,10 +51,11 @@ model User {
   age             Int?
   height          Decimal?
   weight          Decimal?
-  
+
   clinic          Clinic?         @relation("MyClinic")
   notifications   Notification[]
-  skinChecks      SkinCheck[]     // Новая связь: Один пользователь может иметь много SkinCheck записей
+  skinChecks      SkinCheck[]     
+  anxietyChecks   AnxietyCheck[]  // ⬅️ связь с проверками тревожности
 }
 
 model SkinCheck {
@@ -136,4 +135,15 @@ model Notification {
   recurrence_pattern RecurrencePattern?
   
   user               User               @relation(fields: [user_id], references: [id])
+}
+
+model AnxietyCheck {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  answers        String[] // 3 ответа пользователя
+  anxiety_level  Int      // уровень тревожности (0-100)
+  summary        String   // краткое объяснение
+  created_at     DateTime @default(now())
+
+  user           User     @relation(fields: [user_id], references: [id])
 }

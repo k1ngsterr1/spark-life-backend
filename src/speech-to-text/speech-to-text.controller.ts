@@ -3,6 +3,7 @@ import {
   Post,
   UploadedFiles,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { SpeechToTextService } from './speech-to-text.service';
@@ -13,20 +14,21 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
 
 @ApiTags('Speech-to-Text')
 @Controller('speech-to-text')
 export class SpeechToTextController {
   constructor(private readonly speechService: SpeechToTextService) {}
 
-  @Post('transcribe-multiple')
+  @Post('analyze-anxiety')
   @UseInterceptors(FilesInterceptor('audios'))
   @ApiOperation({
-    summary: 'Transcribe multiple audio files using OpenAI Whisper',
+    summary: 'Analyze user anxiety level based on three answers',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Upload multiple audio files (mp3, wav, etc.)',
+    description: 'Upload exactly three audio files (answers to 3 questions)',
     schema: {
       type: 'object',
       properties: {
@@ -42,30 +44,42 @@ export class SpeechToTextController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Transcribed text for each audio file',
+    description: 'Anxiety level and summary',
     schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          file: { type: 'string', example: 'voice1.mp3' },
-          text: { type: 'string', example: 'Пример распознанного текста...' },
-        },
+      type: 'object',
+      properties: {
+        anxiety_level: { type: 'number', example: 45 },
+        summary: { type: 'string', example: 'Умеренный уровень тревожности.' },
       },
     },
   })
-  async transcribeMultiple(@UploadedFiles() files: Express.Multer.File[]) {
-    if (!files || files.length === 0) {
-      throw new Error('Аудиофайлы не загружены');
+  async analyzeAnxiety(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: Request,
+  ) {
+    if (!files || files.length !== 3) {
+      throw new Error('Необходимо загрузить ровно 3 аудиофайла с ответами.');
     }
 
-    const results = await Promise.all(
+    // Здесь userId, например из авторизации
+    const user = req.user as any; // тебе нужно, чтобы req.user содержал id пользователя через авторизацию
+    const userId = user?.id;
+
+    if (!userId) {
+      throw new Error('Не найден пользователь.');
+    }
+
+    // Транскрибируем каждый файл
+    const transcribedAnswers = await Promise.all(
       files.map((file) => this.speechService.transcribeAudio(file)),
     );
 
-    return results.map((text, index) => ({
-      file: files[index].originalname,
-      text,
-    }));
+    // Анализируем уровень тревожности
+    const anxietyResult = await this.speechService.analyzeAnxietyLevel(
+      userId,
+      transcribedAnswers,
+    );
+
+    return anxietyResult;
   }
 }
