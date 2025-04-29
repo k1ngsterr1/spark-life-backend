@@ -189,7 +189,7 @@ export class UserController {
       : 'en';
     console.log(userLanguage);
     return await this.aiService.getRecommendationServices(
-      request.user,
+      request.user.id``,
       userLanguage,
     );
   }

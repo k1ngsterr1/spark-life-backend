@@ -109,13 +109,17 @@ export class UserService {
       ? (user.weekly_water as any)
       : [];
 
-    sleep_schedule.push({ date: today, sleep: data.sleep });
-    water_schedule.push({ date: today, water: data.water });
+    if (data.sleep !== undefined) {
+      sleep_schedule.push({ date: today, sleep: data.sleep });
+    }
+
+    if (data.water !== undefined) {
+      water_schedule.push({ date: today, water: data.water });
+    }
 
     const sorted_sleep_schedule = sleep_schedule.sort(sortByDate).slice(-7);
     const sorted_water_schedule = water_schedule.sort(sortByDate).slice(-7);
 
-    // Обновляем в базе
     await this.prisma.user.update({
       where: { id: userId },
       data: {

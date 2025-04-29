@@ -206,8 +206,9 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       throw new HttpException('Failed to get AI stats', 500);
     }
   }
-  async getRecommendationServices(user: User, lang: 'ru' | 'en') {
+  async getRecommendationServices(userId: number, lang: 'ru' | 'en') {
     try {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
       const services = await this.prisma.service.findMany({
         select: {
           clinic_id: true,
@@ -216,6 +217,7 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
           price: true,
         },
       });
+      console.log(user.diseases);
 
       const userDiseases = user.diseases.join(', ') || 'None';
 
