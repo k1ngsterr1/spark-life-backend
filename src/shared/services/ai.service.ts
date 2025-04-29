@@ -106,7 +106,7 @@ User question:
           `.trim(),
           },
         ],
-        temperature: 0.5,
+        temperature: 0.2,
       });
 
       const aiText = response.choices[0]?.message?.content || 'No response';
