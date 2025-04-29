@@ -12,7 +12,7 @@ import { SpeechToTextModule } from './speech-to-text/speech-to-text.module';
 import { AppointmentModule } from './appointments/appointments.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-
+console.log('works');
 @Module({
   imports: [
     ScheduleModule.forRoot(),
