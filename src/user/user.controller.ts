@@ -221,11 +221,11 @@ export class UserController {
     }
   }
 
-  @Get('ai-stats')
+  @Get('ai-recommendation')
   @ApiOperation({
-    summary: 'Get AI-based health advice (sleep hours and water intake)',
+    summary: 'Get AI-based recommendation of clinic services',
     description:
-      "Analyzes user diseases, age, gender, height, weight and returns recommended daily sleep and water intake in user's language (ru/en).",
+      'Analyzes user diseases and provides a services to treat them.',
   })
   @ApiBearerAuth()
   async getRecomendationServices(@Request() request) {
