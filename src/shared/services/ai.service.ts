@@ -290,44 +290,49 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
           doctors: true,
         },
       });
-      console.log(user.diseases);
 
       const userDiseases = user.diseases.join(', ') || 'None';
 
-      const servicesJson = JSON.stringify(services, null, 2); // ограничим длину, если нужно
+      const servicesJson = JSON.stringify(services, null, 2);
       const skinJson = JSON.stringify(skinCheck, null, 2);
       const anxietyJson = JSON.stringify(anxietyCheck, null, 2);
 
       const prompt =
         lang === 'ru'
           ? `У пользователя следующие заболевания: ${userDiseases}.
-Вот список всех доступных услуг (выбирай только из них, не выдумывай новые):
-${servicesJson},
-Также учитывай оценку кожи и психологическую состовляющую у пользователя для того чтобы подобрать более качественно сервисы для пользователя:
-Кожа: ${skinJson},
-Психологические данные: ${anxietyJson}
+      Вот список всех доступных услуг (выбирай только из них, не выдумывай новые):
+      ${servicesJson},
 
-Выбери из них только те, которые подходят пользователю. Верни результат в формате JSON массива, где каждый объект содержит:
-- clinic_id (строка),
-- name (название услуги),
-- description (описание),
-- price (целое число в тенге).
+      Также учитывай оценку кожи и психологическую составляющую пользователя для более качественного подбора услуг:
+      Кожа: ${skinJson},
+      Психологические данные: ${anxietyJson}
 
-Не добавляй ничего вне JSON.`
+      Выбери только те услуги, которые подходят пользователю. Верни результат в формате JSON массива, где каждый объект содержит:
+
+      - id (уникальный идентификатор сервиса)
+      - clinic_id (строка — ID клиники)
+      - name (название услуги)
+      - description (описание услуги)
+      - price (целое число в тенге)
+
+      Строго следуй этой структуре. Не добавляй ничего лишнего вне JSON массива.`
           : `The user has the following diseases: ${userDiseases}.
-Here is the list of all available services (only choose from this list, do not invent new ones):
-${servicesJson},
-Also take into account the user's skin condition and psychological aspects in order to select services more accurately for the user:
-Skin: ${skinJson},
-Psychological data: ${anxietyJson}
+      Here is the list of all available services (only choose from this list, do not invent new ones):
+      ${servicesJson},
 
-Select only those that are suitable for the user. Return the result as a JSON array where each object contains:
-- clinic_id (string),
-- name (service name),
-- description,
-- price (integer in KZT).
+      Also take into account the user's skin condition and psychological aspects to select services more accurately:
+      Skin: ${skinJson},
+      Psychological data: ${anxietyJson}
 
-Do not include anything outside the JSON array.`;
+      Select only those services that are suitable for the user. Return the result as a JSON array, where each object must include:
+
+      - id (unique service identifier)
+      - clinic_id (string — clinic ID)
+      - name (service name)
+      - description (service description)
+      - price (integer in KZT)
+
+      Strictly follow this structure. Do not include anything outside the JSON array.`;
 
       const chatCompletion = await this.client.chat.completions.create({
         model: 'gpt-4.1',
@@ -336,8 +341,8 @@ Do not include anything outside the JSON array.`;
             role: 'system',
             content:
               lang === 'ru'
-                ? 'Ты медицинский ассистент. Отвечай строго в формате JSON.'
-                : 'You are a medical assistant. Respond strictly in JSON format.',
+                ? 'Ты доктор с большим опытом и стажем. Отвечай строго в формате JSON.'
+                : 'You are a medical doctor with great experience. Respond strictly in JSON format.',
           },
           {
             role: 'user',
@@ -349,16 +354,23 @@ Do not include anything outside the JSON array.`;
 
       const aiContent = chatCompletion.choices[0]?.message?.content || '[]';
 
-      let parsed: any[] = [];
+      let parsedIds: { id: number }[] = [];
 
       try {
-        parsed = JSON.parse(aiContent);
+        parsedIds = JSON.parse(aiContent);
       } catch (jsonError) {
         console.error('Failed to parse AI response as JSON:', aiContent);
         throw new HttpException('AI response was not a valid JSON array', 500);
       }
 
-      return parsed;
+      const selectedIds = parsedIds.map((item) => item.id);
+
+      // Фильтруем те сервисы, которые соответствуют выбранным ID
+      const recommendedServices = services.filter((service) =>
+        selectedIds.includes(service.id),
+      );
+
+      return recommendedServices;
     } catch (error) {
       console.error('AIService getRecommendationServices error:', error);
       throw new HttpException('Failed to get AI recommendations', 500);
