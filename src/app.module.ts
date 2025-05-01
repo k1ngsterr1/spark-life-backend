@@ -13,6 +13,7 @@ import { AppointmentModule } from './appointments/appointments.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { DentalCheckModule } from './dental-check/dental-check.module';
+import { TwogisClinicsModule } from './2gis-clinics/2gis-clinics.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -32,6 +33,7 @@ import { DentalCheckModule } from './dental-check/dental-check.module';
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads', // Путь в URL
     }),
+    TwogisClinicsModule,
   ],
 })
 export class AppModule {}

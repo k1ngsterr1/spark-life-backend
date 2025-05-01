@@ -63,7 +63,7 @@ export class RegisterDto {
     format: 'binary',
   })
   @IsOptional()
-  med_doc: any;
+  med_doc?: any;
 
   @ApiProperty({
     description: 'User password',
