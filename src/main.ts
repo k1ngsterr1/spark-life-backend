@@ -14,7 +14,11 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: ['http://localhost:5173', 'https://spark-life-superapp.vercel.app'],
+    origin: [
+      'http://localhost:5173',
+      'https://spark-life-superapp.vercel.app',
+      'https://kazonline.kz',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
