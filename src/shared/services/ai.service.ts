@@ -201,7 +201,8 @@ User question:
       return {
         id: uuidv4(),
         text: aiText,
-        audioPath: `/audio/${audioId}.wav`,
+        audioPath: `
+https://spark-life-backend-production.up.railway.app/uploads/${audioId}.wav`,
         sender: 'ai',
         timestamp: new Date(),
       };
