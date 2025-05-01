@@ -191,7 +191,7 @@ User question:
       const audioId = uuidv4();
       const audioPath = path.join(
         process.cwd(), // <--- корень проекта, а не dist
-        'public/audio',
+        'uploads',
         `${audioId}.wav`,
       );
 
