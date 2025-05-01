@@ -211,7 +211,7 @@ User question:
 
   private async synthesizeSpeech(text: string): Promise<string> {
     const client = new textToSpeech.TextToSpeechClient({
-      keyFilename: path.join(__dirname, '../../keys/tts-key.json'),
+      keyFilename: path.join(__dirname, '../../../keys/tts-key.json'),
     });
 
     const request: textToSpeech.protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
