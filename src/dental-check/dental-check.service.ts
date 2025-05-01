@@ -8,7 +8,8 @@ import { AIService } from 'src/shared/services/ai.service';
 @Injectable()
 export class DentalCheckService {
   private readonly roboflowUrl =
-    'https://serverless.roboflow.com/teeth-disease-m1uob/1?api_key=xIuByx3OcFzJSR0LAA9J';
+    'https://serverless.roboflow.com/teeth-disease-m1uob/1';
+  private readonly roboflowApiKey = 'xIuByx3OcFzJSR0LAA9J';
 
   constructor(
     private prisma: PrismaService,
@@ -16,31 +17,34 @@ export class DentalCheckService {
   ) {}
 
   async analyze(userId: number, base64Url: string) {
-    // Извлекаем base64-строку и mime-тип
     const matches = base64Url.match(/^data:(.+);base64,(.+)$/);
     if (!matches) {
       throw new BadRequestException('Invalid base64 image data');
     }
 
-    const mimeType = matches[1]; // например, image/jpeg
-    const base64Data = matches[2];
-    const extension = mimeType.split('/')[1]; // jpeg, png и т.д.
+    const mimeType = matches[1];
+    const base64Data = matches[2].replace(/\r?\n|\r/g, '');
+    const extension = mimeType.split('/')[1];
 
     try {
-      // Отправляем только base64 в Roboflow
-      const { data } = await axios.post(
-        this.roboflowUrl,
-        { data: base64Data },
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
-      );
-
-      // Сохраняем изображение
+      // 1. Сохраняем изображение
       const fileName = `${Date.now()}.${extension}`;
       const filePath = path.resolve('uploads', fileName);
       const buffer = Buffer.from(base64Data, 'base64');
       await writeFile(filePath, buffer);
 
-      // Сохраняем в БД
+      // 2. Генерируем публичный URL
+      const publicUrl = `https://spark-life-backend-production.up.railway.app/`;
+
+      // 3. Отправляем ссылку на изображение в Roboflow
+      const { data } = await axios.post(this.roboflowUrl, null, {
+        params: {
+          api_key: this.roboflowApiKey,
+          image: publicUrl,
+        },
+      });
+
+      // 4. Сохраняем результат
       const result = await this.prisma.dentalCheck.create({
         data: {
           user_id: userId,
@@ -49,7 +53,7 @@ export class DentalCheckService {
         },
       });
 
-      // Получаем пользователя и объяснение
+      // 5. AI пояснение
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       const explanation = await this.aiService.explainDentalCheckResultRu(
         user,
@@ -61,6 +65,7 @@ export class DentalCheckService {
         explanation,
       };
     } catch (error) {
+      console.error('Roboflow error:', error.response?.data || error.message);
       throw new BadRequestException(
         error.response?.data?.message || 'Ошибка анализа зубов',
       );
