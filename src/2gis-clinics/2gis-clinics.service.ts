@@ -17,7 +17,6 @@ export class TwoGisClinicService {
           fields: 'items.photos',
         },
       });
-
       return (
         response.data.result?.items?.[0]?.photos?.map((p: any) => p.image) || []
       );
@@ -75,10 +74,15 @@ export class TwoGisClinicService {
             name: item.name,
             short_name: item.org?.name,
             address: item.address_name,
-            phone:
-              item.contact_groups?.[0]?.contacts?.find(
-                (c: any) => c.type === 'phone',
-              )?.value || 'Не указан',
+            phones:
+              item.contact_groups
+                ?.flatMap(
+                  (group: any) =>
+                    group.contacts?.filter((c: any) => c.type === 'phone') ||
+                    [],
+                )
+                .map((c: any) => c.value) || [],
+
             schedule: item.schedule?.working_hours?.text || 'Нет данных',
             location: item.point,
             link: item.link || '',
@@ -91,6 +95,7 @@ export class TwoGisClinicService {
         }),
       );
 
+      // 📊 Фильтрация по рейтингу и цене
       enriched = enriched.filter((clinic) => {
         if (minRating && clinic.rating !== null && clinic.rating < minRating)
           return false;
@@ -99,6 +104,7 @@ export class TwoGisClinicService {
         return true;
       });
 
+      // 🧮 Сортировка
       if (sortByPrice) {
         enriched.sort((a, b) =>
           sortByPrice === 'asc'
