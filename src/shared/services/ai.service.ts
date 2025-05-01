@@ -165,7 +165,7 @@ User information:
 You are an experienced AI assistant therapist with 30+ years of practice.
 You provide advice based on the user's personal medical background and contact details.
 Always consider user's name, age, gender, diseases and body parameters if available.
-Be empathetic, professional, clear, and focused on practical advice. Отвечай на русском! И отвечай кратко, не супер много слов!.
+Be empathetic, professional, clear, and focused on practical advice. Отвечай на русском! И отвечай кратко, не супер много слов! Не говори всегда здравствуйте, один раз сказал и хватитs.
             `.trim(),
           },
           {
@@ -201,8 +201,7 @@ User question:
       return {
         id: uuidv4(),
         text: aiText,
-        audioPath: `
-https://spark-life-backend-production.up.railway.app/uploads/${audioId}.wav`,
+        audioPath: `https://spark-life-backend-production.up.railway.app/uploads/${audioId}.wav`,
         sender: 'ai',
         timestamp: new Date(),
       };
