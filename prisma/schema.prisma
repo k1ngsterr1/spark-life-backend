@@ -57,7 +57,21 @@ model User {
   skinChecks      SkinCheck[]
   anxietyChecks   AnxietyCheck[]  @relation("UserAnxietyChecks")
   appointments    Appointment[]   @relation("UserAppointments")
+  dentalChecks    DentalCheck[]   @relation("UserDentalChecks") // ✅ добавлено
 }
+
+model DentalCheck {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  result      Json
+  image_url   String
+  created_at  DateTime @default(now())
+
+  user        User     @relation("UserDentalChecks", fields: [user_id], references: [id])
+
+  @@index([user_id])
+}
+
 
 model SkinCheck {
   id                   Int      @id @default(autoincrement())
@@ -82,6 +96,9 @@ model SkinCheck {
 
   user                 User     @relation(fields: [user_id], references: [id])
 }
+
+
+
 
 model Clinic {
   id            String     @id @default(uuid())

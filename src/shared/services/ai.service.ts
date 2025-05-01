@@ -377,4 +377,57 @@ Weight: ${user.weight ?? (userLanguage === 'ru' ? 'Не указан' : 'Unknown
       throw new HttpException('Failed to get AI recommendations', 500);
     }
   }
+
+  async explainDentalCheckResultRu(
+    user: User,
+    result: any,
+  ): Promise<{
+    diagnosis: string;
+    explanation: string;
+    recommendation: string;
+  }> {
+    try {
+      const systemPrompt = `
+Ты — опытный стоматолог с большим медицинским опытом.
+На основе результатов анализа от Roboflow объясни, какое заболевание обнаружено, что оно означает и какие действия нужно предпринять.
+Отвечай строго в формате JSON:
+
+{
+  "diagnosis": "OSMF — подслизистый фиброз полости рта",
+  "explanation": "OSMF — хроническое заболевание полости рта, часто связанное с жеванием табака или другими раздражителями. Может вызывать жжение, ограничение подвижности рта и в редких случаях — перерождение в рак.",
+  "recommendation": "Рекомендуется срочно обратиться к стоматологу для ранней диагностики и предотвращения осложнений."
+}
+    `.trim();
+
+      const userPrompt = `
+Пациент: ${user.first_name} ${user.last_name}
+Пол: ${user.gender}
+Возраст: ${user.age ?? 'не указан'}
+
+Результат анализа Roboflow:
+${JSON.stringify(result.predictions, null, 2)}
+    `.trim();
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.2,
+      });
+
+      const message = response.choices[0]?.message?.content;
+      if (!message) throw new Error('Пустой ответ от ChatGPT');
+
+      const parsed = JSON.parse(message);
+      return parsed;
+    } catch (error) {
+      console.error('AIService explainDentalCheckResultRu error:', error);
+      throw new HttpException(
+        'Не удалось получить объяснение диагноза от AI',
+        500,
+      );
+    }
+  }
 }
