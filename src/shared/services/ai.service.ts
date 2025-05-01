@@ -529,14 +529,19 @@ ${JSON.stringify(result.predictions, null, 2)}
         throw new HttpException('Пустой ответ от GPT', 500);
       }
 
-      console.log(
-        '[diagnoseFromAnalysisImage] Содержимое ответа (первые 500 символов):',
-      );
-      console.log(text.slice(0, 500) + '...');
+      let cleanedText = text.trim();
+
+      // Удаляем Markdown-блок кода: ```json ... ```
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText
+          .replace(/^```json/, '')
+          .replace(/```$/, '')
+          .trim();
+      }
 
       let result;
       try {
-        result = JSON.parse(text);
+        result = JSON.parse(cleanedText);
       } catch (err) {
         console.error('[diagnoseFromAnalysisImage] Ошибка парсинга JSON:', err);
         throw new HttpException('Ошибка парсинга JSON', 500);
