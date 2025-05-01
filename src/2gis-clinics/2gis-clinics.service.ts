@@ -23,6 +23,8 @@ export class TwoGisClinicService {
         },
       });
 
+      console.log(response.data);
+
       return response.data.result.items.map((item: any) => ({
         name: item.name,
         address: item.address_name,

@@ -36,6 +36,12 @@ export class DentalCheckController {
     @UploadedFile() file: Express.Multer.File,
     @Body('userId', ParseIntPipe) userId: number,
   ) {
-    return this.dentalCheckService.analyze(userId, file);
+    // преобразуем в base64
+    const base64 = file.buffer.toString('base64');
+    const mimeType = file.mimetype; // например, 'image/jpeg'
+    const base64Url = `data:${mimeType};base64,${base64}`;
+
+    // отправляем в сервис
+    return this.dentalCheckService.analyze(userId, base64Url);
   }
 }
