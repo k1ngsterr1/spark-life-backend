@@ -16,6 +16,11 @@ export class TwoGisController {
   @ApiQuery({ name: 'page', type: Number, required: false })
   @ApiQuery({ name: 'pageSize', type: Number, required: false })
   @ApiQuery({ name: 'category', type: String, required: false })
+  @ApiQuery({ name: 'minRating', type: Number, required: false })
+  @ApiQuery({ name: 'minPrice', type: Number, required: false })
+  @ApiQuery({ name: 'maxPrice', type: Number, required: false })
+  @ApiQuery({ name: 'sortByPrice', enum: ['asc', 'desc'], required: false })
+  @ApiQuery({ name: 'sortByRating', enum: ['asc', 'desc'], required: false })
   async search(@Query() dto: CreateClinicSearchDto) {
     return this.clinicService.searchClinics(dto);
   }

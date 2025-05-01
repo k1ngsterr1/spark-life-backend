@@ -28,7 +28,18 @@ export class TwoGisClinicService {
   }
 
   async searchClinics(dto: CreateClinicSearchDto) {
-    const { query, city, page, pageSize, category } = dto;
+    const {
+      query,
+      city,
+      page,
+      pageSize,
+      category,
+      minRating,
+      minPrice,
+      maxPrice,
+      sortByPrice,
+      sortByRating,
+    } = dto;
 
     try {
       const response = await axios.get(this.BASE_URL, {
@@ -53,7 +64,7 @@ export class TwoGisClinicService {
         );
       }
 
-      const enriched = await Promise.all(
+      let enriched = await Promise.all(
         items.map(async (item: any) => {
           const photos = await this.getPhotosById(item.external_id);
           const averagePrice =
@@ -79,6 +90,30 @@ export class TwoGisClinicService {
           };
         }),
       );
+
+      enriched = enriched.filter((clinic) => {
+        if (minRating && clinic.rating !== null && clinic.rating < minRating)
+          return false;
+        if (minPrice && clinic.averagePrice < minPrice) return false;
+        if (maxPrice && clinic.averagePrice > maxPrice) return false;
+        return true;
+      });
+
+      if (sortByPrice) {
+        enriched.sort((a, b) =>
+          sortByPrice === 'asc'
+            ? a.averagePrice - b.averagePrice
+            : b.averagePrice - a.averagePrice,
+        );
+      }
+
+      if (sortByRating) {
+        enriched.sort((a, b) => {
+          const aRating = a.rating ?? 0;
+          const bRating = b.rating ?? 0;
+          return sortByRating === 'asc' ? aRating - bRating : bRating - aRating;
+        });
+      }
 
       return enriched;
     } catch (error) {
