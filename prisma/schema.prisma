@@ -57,8 +57,25 @@ model User {
   skinChecks      SkinCheck[]
   anxietyChecks   AnxietyCheck[]  @relation("UserAnxietyChecks")
   appointments    Appointment[]   @relation("UserAppointments")
-  dentalChecks    DentalCheck[]   @relation("UserDentalChecks") // ✅ добавлено
+  dentalChecks    DentalCheck[]   @relation("UserDentalChecks")
+
+  // ✅ Новое поле для связи с анализами
+  medicalAnalyses MedicalAnalysis[] @relation("UserMedicalAnalyses")
 }
+
+
+model MedicalAnalysis {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  image_url  String
+  result     Json
+  created_at DateTime @default(now())
+
+  user       User     @relation("UserMedicalAnalyses", fields: [user_id], references: [id])
+
+  @@index([user_id])
+}
+
 
 model DentalCheck {
   id          Int      @id @default(autoincrement())

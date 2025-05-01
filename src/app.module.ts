@@ -14,6 +14,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { DentalCheckModule } from './dental-check/dental-check.module';
 import { TwogisClinicsModule } from './2gis-clinics/2gis-clinics.module';
+import { AnalysisModule } from './analysis/analysis.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -34,6 +35,7 @@ import { TwogisClinicsModule } from './2gis-clinics/2gis-clinics.module';
       serveRoot: '/uploads', // Путь в URL
     }),
     TwogisClinicsModule,
+    AnalysisModule,
   ],
 })
 export class AppModule {}

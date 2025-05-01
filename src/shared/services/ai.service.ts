@@ -430,4 +430,49 @@ ${JSON.stringify(result.predictions, null, 2)}
       );
     }
   }
+
+  async diagnoseFromAnalysisImage(userId: number, imageUrl: string) {
+    const prompt = `
+Ты опытный врач. Пользователь загрузил фото анализа крови или биохимии.
+
+Извлеки данные, если они читаемы, и на основе медицинских знаний предположи возможные диагнозы. Верни JSON:
+
+{
+  "potential_diagnoses": [
+    {
+      "name": "Название диагноза",
+      "reason": "Почему ты это думаешь (укажи параметры)",
+      "recommended_action": "Что делать"
+    }
+  ]
+}
+`.trim();
+
+    const response = await this.client.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: { url: imageUrl },
+            },
+          ],
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 1500,
+    });
+
+    const text = response.choices[0]?.message?.content;
+    if (!text) throw new HttpException('Пустой ответ от GPT', 500);
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new HttpException('Ошибка парсинга JSON', 500);
+    }
+  }
 }
