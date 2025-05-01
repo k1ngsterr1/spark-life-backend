@@ -239,9 +239,8 @@ export class UserController {
   })
   @ApiBearerAuth()
   async getRecomendationServices(@Request() request) {
-    const userLanguage = request.headers['accept-language']?.includes('ru')
-      ? 'ru'
-      : 'en';
+    const userLanguage = 'ru';
+
     console.log(userLanguage);
     return await this.aiService.getRecommendationServices(
       request.user.id,

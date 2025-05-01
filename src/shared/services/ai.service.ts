@@ -165,7 +165,7 @@ User information:
 You are an experienced AI assistant therapist with 30+ years of practice.
 You provide advice based on the user's personal medical background and contact details.
 Always consider user's name, age, gender, diseases and body parameters if available.
-Be empathetic, professional, clear, and focused on practical advice.
+Be empathetic, professional, clear, and focused on practical advice. Отвечай на русском!.
             `.trim(),
           },
           {
@@ -182,6 +182,8 @@ User question:
       });
 
       const aiText = response.choices[0]?.message?.content || 'No response';
+      console.log('[askAiAssistance] Ответ от GPT:');
+      console.log(aiText);
 
       // 🔊 Step 2: Call Google TTS API
       const ttsResponse = await this.synthesizeSpeech(aiText);
@@ -192,6 +194,7 @@ User question:
         `../../public/audio/${audioId}.wav`,
       );
       fs.writeFileSync(audioPath, Buffer.from(ttsResponse, 'base64'));
+      console.log('[askAiAssistance] Аудиофайл сохранён:', audioPath);
 
       return {
         id: uuidv4(),
@@ -531,7 +534,6 @@ ${JSON.stringify(result.predictions, null, 2)}
 
       let cleanedText = text.trim();
 
-      // Удаляем Markdown-блок кода: ```json ... ```
       if (cleanedText.startsWith('```json')) {
         cleanedText = cleanedText
           .replace(/^```json/, '')

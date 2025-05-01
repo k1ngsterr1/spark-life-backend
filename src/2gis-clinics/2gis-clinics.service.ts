@@ -8,6 +8,17 @@ export class TwoGisClinicService {
   private readonly BASE_URL = 'https://catalog.api.2gis.com/3.0/items';
   private readonly ALMATY_REGION_ID = '141265769829260';
 
+  private clinicPriceMap = new Map<string, number>();
+
+  private getOrGeneratePrice(id: string): number {
+    if (this.clinicPriceMap.has(id)) {
+      return this.clinicPriceMap.get(id)!;
+    }
+    const price = Math.floor(Math.random() * (30000 - 3500 + 1)) + 3500;
+    this.clinicPriceMap.set(id, price);
+    return price;
+  }
+
   async getPhotosById(externalId: string): Promise<string[]> {
     try {
       const response = await axios.get(`${this.BASE_URL}/byid`, {
@@ -79,8 +90,7 @@ export class TwoGisClinicService {
       let enriched = await Promise.all(
         items.map(async (item: any) => {
           const photos = await this.getPhotosById(item.external_id);
-          const averagePrice =
-            Math.floor(Math.random() * (30000 - 3500 + 1)) + 3500;
+          const averagePrice = this.getOrGeneratePrice(item.external_id);
 
           return {
             id: item.external_id,
@@ -95,7 +105,6 @@ export class TwoGisClinicService {
                     [],
                 )
                 .map((c: any) => c.value) || [],
-
             schedule: item.schedule?.working_hours?.text || 'Нет данных',
             location: item.point,
             link: item.link || '',
