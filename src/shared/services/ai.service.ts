@@ -190,9 +190,11 @@ User question:
 
       const audioId = uuidv4();
       const audioPath = path.join(
-        __dirname,
-        `../../public/audio/${audioId}.wav`,
+        process.cwd(), // <--- корень проекта, а не dist
+        'public/audio',
+        `${audioId}.wav`,
       );
+
       fs.writeFileSync(audioPath, Buffer.from(ttsResponse, 'base64'));
       console.log('[askAiAssistance] Аудиофайл сохранён:', audioPath);
 
