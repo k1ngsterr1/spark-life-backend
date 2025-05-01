@@ -34,7 +34,7 @@ export class DentalCheckService {
       await writeFile(filePath, buffer);
 
       // 2. Генерируем публичный URL
-      const publicUrl = `https://spark-life-backend-production.up.railway.app/`;
+      const publicUrl = `https://spark-life-backend-production.up.railway.app/uploads/${fileName}`;
 
       // 3. Отправляем ссылку на изображение в Roboflow
       const { data } = await axios.post(this.roboflowUrl, null, {
