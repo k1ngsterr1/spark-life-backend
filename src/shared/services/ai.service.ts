@@ -473,83 +473,99 @@ ${JSON.stringify(result.predictions, null, 2)}
   }
 
   async diagnoseFromAnalysisImage(userId: number, imageUrl: string) {
+    console.log(
+      `[diagnoseFromAnalysisImage] Начало. userId=${userId}, imageUrl=${imageUrl}`,
+    );
+
     const prompt = `
-Ты высококвалифицированный врач-диагност с большим опытом расшифровки лабораторных анализов. Пользователь загрузил фото анализа крови (ОАК, биохимия и др.).
+Ты опытный врач-диагност. Пользователь загрузил фото анализа крови (ОАК, биохимия или другой лабораторный анализ).
 
-1. Распознай и структурируй читаемые параметры (например, HGB, WBC, RBC, ALT, AST, Глюкоза, Креатинин, и т.д.) с указанием их значений и референсных диапазонов.
-2. Определи, какие параметры отклоняются от нормы, и классифицируй отклонения как легкие, умеренные или тяжелые.
-3. На основе совокупности отклонений и клинических знаний сформулируй возможные диагнозы.
-4. Для каждого диагноза — укажи:
-   - Причину (с указанием конкретных отклонений, влияющих на гипотезу)
-   - Уровень вероятности (низкий / средний / высокий)
-   - Рекомендуемые действия (дополнительные анализы, консультации, срочные меры)
+Проанализируй изображение:
+1. Определи общее состояние пациента на основе распознанных данных.
+2. Укажи, есть ли отклонения от нормы (без детализации по каждому показателю).
+3. Предположи возможные диагнозы или состояния.
+4. Дай краткие рекомендации: что делать, к какому врачу обратиться, какие дополнительные анализы сдать.
 
-Верни строго структурированный JSON следующего формата:
+Верни результат в виде JSON:
 
 {
-  "parameters": [
-    {
-      "name": "Название показателя",
-      "value": "Распознанное значение",
-      "unit": "Единицы измерения",
-      "reference_range": "Референсный диапазон",
-      "status": "в норме / повышен / понижен",
-      "severity": "норма / легкое / умеренное / тяжелое"
-    }
-  ],
+  "status": "здоров / возможны отклонения / тревожные показатели",
   "potential_diagnoses": [
     {
       "name": "Название диагноза",
-      "reason": "Обоснование: какие параметры и как отклонены",
-      "probability": "низкая / средняя / высокая",
+      "reason": "Обоснование",
       "recommended_action": "Что рекомендуется сделать"
     }
   ],
-  "summary": {
-    "overall_status": "здоров / возможны нарушения / тревожные показатели",
-    "priority_level": "низкий / средний / высокий",
-    "advice": "Общий совет на основе всех данных"
-  }
+  "advice": "Общий совет для пользователя"
 }
 `.trim();
 
-    const response = await this.client.chat.completions.create({
-      model: 'gpt-4-turbo',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: { url: imageUrl },
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 1500,
-    });
-
-    console.log('[diagnoseFromAnalysisImage] Ответ от GPT получен');
-
-    const text = response.choices[0]?.message?.content;
-
-    if (!text) {
-      console.error('[diagnoseFromAnalysisImage] Пустой ответ от GPT');
-      throw new HttpException('Пустой ответ от GPT', 500);
-    }
-    if (!text) throw new HttpException('Пустой ответ от GPT', 500);
-
-    console.log(
-      '[diagnoseFromAnalysisImage] Содержимое ответа (первые 500 символов):',
-    );
-    console.log(text.slice(0, 500) + '...');
-
     try {
-      return JSON.parse(text);
-    } catch {
-      throw new HttpException('Ошибка парсинга JSON', 500);
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4-turbo',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: { url: imageUrl },
+              },
+            ],
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 1000,
+      });
+
+      console.log('[diagnoseFromAnalysisImage] Ответ от GPT получен');
+
+      const text = response.choices[0]?.message?.content;
+
+      if (!text) {
+        console.error('[diagnoseFromAnalysisImage] Пустой ответ от GPT');
+        throw new HttpException('Пустой ответ от GPT', 500);
+      }
+
+      console.log(
+        '[diagnoseFromAnalysisImage] Содержимое ответа (первые 500 символов):',
+      );
+      console.log(text.slice(0, 500) + '...');
+
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (err) {
+        console.error('[diagnoseFromAnalysisImage] Ошибка парсинга JSON:', err);
+        throw new HttpException('Ошибка парсинга JSON', 500);
+      }
+
+      console.log(
+        '[diagnoseFromAnalysisImage] JSON успешно распарсен. Сохраняем в БД...',
+      );
+
+      const saved = await this.prisma.medicalAnalysis.create({
+        data: {
+          user_id: userId,
+          image_url: imageUrl,
+          result,
+        },
+      });
+
+      console.log(
+        '[diagnoseFromAnalysisImage] Данные успешно сохранены с ID:',
+        saved.id,
+      );
+
+      return saved;
+    } catch (err) {
+      console.error(
+        '[diagnoseFromAnalysisImage] Ошибка во время выполнения:',
+        err,
+      );
+      throw new HttpException('Ошибка при анализе изображения', 500);
     }
   }
 }
