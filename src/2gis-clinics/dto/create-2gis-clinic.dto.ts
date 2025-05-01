@@ -17,4 +17,8 @@ export class CreateClinicSearchDto {
   @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
   pageSize?: number = 20;
+
+  @IsOptional()
+  @IsString()
+  category?: string; // добавлено для фильтрации по категории
 }

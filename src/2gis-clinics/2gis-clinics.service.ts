@@ -9,7 +9,7 @@ export class TwoGisClinicService {
   private readonly ALMATY_REGION_ID = '141265769829260';
 
   async searchClinics(dto: CreateClinicSearchDto) {
-    const { query, page, pageSize } = dto;
+    const { query, city, page, pageSize, category } = dto;
 
     try {
       const response = await axios.get(this.BASE_URL, {
@@ -18,13 +18,23 @@ export class TwoGisClinicService {
           key: this.API_KEY,
           page,
           page_size: pageSize,
-          region_id: this.ALMATY_REGION_ID,
           fields:
             'items.point,items.address_name,items.name,items.schedule,items.contact_groups,items.rubrics',
+          region: city,
         },
       });
 
-      return response.data.result.items.map((item: any) => ({
+      let items = response.data.result.items;
+
+      if (category) {
+        items = items.filter((item: any) =>
+          item.rubrics?.some((r: any) =>
+            r.name.toLowerCase().includes(category.toLowerCase()),
+          ),
+        );
+      }
+
+      return items.map((item: any) => ({
         name: item.name,
         address: item.address_name,
         phone:

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { TwoGisClinicController } from './2gis-clinics.controller';
 import { TwoGisClinicService } from './2gis-clinics.service';
+import { TwoGisController } from './2gis-clinics.controller';
 
 @Module({
-  controllers: [TwoGisClinicController],
+  controllers: [TwoGisController],
   providers: [TwoGisClinicService],
 })
 export class TwogisClinicsModule {}
