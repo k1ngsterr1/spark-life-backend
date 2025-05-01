@@ -24,7 +24,7 @@ export class AnalysisService {
     fs.writeFileSync(savePath, file.buffer);
 
     // Генерируем публичный URL (должен совпадать с baseUrl клиента)
-    const imageUrl = `${process.env.BASE_URL}/analysis-images/${filename}`;
+    const imageUrl = `${process.env.BASE_URL}/uploads/analysis-images/${filename}`;
 
     // Теперь передаём корректный imageUrl в AIService
     const result = await this.aiService.diagnoseFromAnalysisImage(
