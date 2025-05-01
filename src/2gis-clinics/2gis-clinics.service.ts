@@ -6,9 +6,10 @@ import axios from 'axios';
 export class TwoGisClinicService {
   private readonly API_KEY = '0384218b-dd5e-4b27-bb93-d139c9d3b110';
   private readonly BASE_URL = 'https://catalog.api.2gis.com/3.0/items';
+  private readonly ALMATY_REGION_ID = '141265769829260';
 
   async searchClinics(dto: CreateClinicSearchDto) {
-    const { query, city, page, pageSize } = dto;
+    const { query, page, pageSize } = dto;
 
     try {
       const response = await axios.get(this.BASE_URL, {
@@ -17,13 +18,11 @@ export class TwoGisClinicService {
           key: this.API_KEY,
           page,
           page_size: pageSize,
+          region_id: this.ALMATY_REGION_ID,
           fields:
             'items.point,items.address_name,items.name,items.schedule,items.contact_groups,items.rubrics',
-          region: city,
         },
       });
-
-      console.log(response.data);
 
       return response.data.result.items.map((item: any) => ({
         name: item.name,
