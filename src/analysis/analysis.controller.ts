@@ -16,6 +16,8 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { AnalysisService } from './analysis.service';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @ApiTags('AI Анализ')
 @Controller('analysis')
@@ -25,7 +27,19 @@ export class AnalysisController {
 
   @Post('diagnose-from-image')
   @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(FileInterceptor('image')) // 👈 загружаем файл
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads', // 👈 папка для сохранения
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Получить расшифровку анализа по изображению (AI) и сохранить',

@@ -12,21 +12,19 @@ export class AnalysisService {
   ) {}
 
   async diagnoseFromImage(userId: number, file: Express.Multer.File) {
-    // Сохраняем изображение во временное хранилище (например, public/analysis-images)
     const filename = `${Date.now()}-${file.originalname}`;
-    const saveDir = path.join(__dirname, '../../public/analysis-images');
+    const saveDir = path.join(__dirname, '../../uploads');
     const savePath = path.join(saveDir, filename);
 
     if (!fs.existsSync(saveDir)) {
       fs.mkdirSync(saveDir, { recursive: true });
     }
 
-    fs.writeFileSync(savePath, file.buffer);
+    // ✅ Копируем файл с диска
+    fs.copyFileSync(file.path, savePath);
 
-    // Генерируем публичный URL (должен совпадать с baseUrl клиента)
-    const imageUrl = `${process.env.BASE_URL}/uploads/analysis-images/${filename}`;
+    const imageUrl = `${process.env.BASE_URL}/uploads/${filename}`;
 
-    // Теперь передаём корректный imageUrl в AIService
     const result = await this.aiService.diagnoseFromAnalysisImage(
       userId,
       imageUrl,
