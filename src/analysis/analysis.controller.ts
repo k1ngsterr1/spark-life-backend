@@ -1,7 +1,21 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Request,
+} from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiOperation, ApiTags, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
-import { AnalysisService } from './analysis.service'; // ✅ поменяли AIService на AnalysisService
+import { AnalysisService } from './analysis.service';
 
 @ApiTags('AI Анализ')
 @Controller('analysis')
@@ -11,6 +25,8 @@ export class AnalysisController {
 
   @Post('diagnose-from-image')
   @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('image')) // 👈 загружаем файл
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Получить расшифровку анализа по изображению (AI) и сохранить',
   })
@@ -18,15 +34,19 @@ export class AnalysisController {
     schema: {
       type: 'object',
       properties: {
-        userId: { type: 'number', example: 1 },
-        imageUrl: { type: 'string', example: 'https://example.com/image.jpg' },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
       },
-      required: ['userId', 'imageUrl'],
+      required: ['image'],
     },
   })
   async diagnoseFromImage(
-    @Body() body: { userId: number; imageUrl: string },
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
   ): Promise<any> {
-    return this.analysisService.diagnoseFromImage(body.userId, body.imageUrl);
+    // например, сохранить изображение в S3 или отдать в AIService напрямую
+    return this.analysisService.diagnoseFromImage(req.user.id, file);
   }
 }

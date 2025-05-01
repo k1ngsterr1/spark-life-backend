@@ -4,7 +4,7 @@ import axios from 'axios';
 
 @Injectable()
 export class TwoGisClinicService {
-  private readonly API_KEY = '0384218b-dd5e-4b27-bb93-d139c9d3b110';
+  private readonly API_KEY = 'a99da918-8d20-48f9-ad44-464d98a93ae2';
   private readonly BASE_URL = 'https://catalog.api.2gis.com/3.0/items';
   private readonly ALMATY_REGION_ID = '141265769829260';
 
@@ -40,7 +40,16 @@ export class TwoGisClinicService {
       sortByRating,
     } = dto;
 
+    console.log('[2GIS] Incoming DTO:', JSON.stringify(dto, null, 2));
+
     try {
+      console.log('[2GIS] Sending API request with params:', {
+        q: query,
+        page,
+        page_size: pageSize,
+        region: this.ALMATY_REGION_ID,
+      });
+
       const response = await axios.get(this.BASE_URL, {
         params: {
           q: query,
@@ -49,17 +58,21 @@ export class TwoGisClinicService {
           page_size: pageSize,
           fields:
             'items.point,items.address_name,items.name,items.schedule,items.contact_groups,items.rubrics,items.link,items.reviews,items.org,items.external_id,items.description,items.features',
-          region: city || this.ALMATY_REGION_ID,
+          region: this.ALMATY_REGION_ID,
         },
       });
 
       let items = response.data.result.items;
+      console.log(`[2GIS] Received ${items.length} raw items`);
 
       if (category) {
         items = items.filter((item: any) =>
           item.rubrics?.some((r: any) =>
             r.name.toLowerCase().includes(category.toLowerCase()),
           ),
+        );
+        console.log(
+          `[2GIS] Filtered by category "${category}": ${items.length} items left`,
         );
       }
 
@@ -95,22 +108,32 @@ export class TwoGisClinicService {
         }),
       );
 
-      // 📊 Фильтрация по рейтингу и цене
+      console.log(`[2GIS] Enriched ${enriched.length} clinics`);
+
       enriched = enriched.filter((clinic) => {
-        if (minRating && clinic.rating !== null && clinic.rating < minRating)
-          return false;
-        if (minPrice && clinic.averagePrice < minPrice) return false;
-        if (maxPrice && clinic.averagePrice > maxPrice) return false;
-        return true;
+        const pass =
+          (!minRating ||
+            clinic.rating === null ||
+            clinic.rating >= minRating) &&
+          (!minPrice || clinic.averagePrice >= minPrice) &&
+          (!maxPrice || clinic.averagePrice <= maxPrice);
+
+        if (!pass) {
+          console.log(`[2GIS] Clinic "${clinic.name}" excluded by filters`);
+        }
+
+        return pass;
       });
 
-      // 🧮 Сортировка
+      console.log(`[2GIS] Clinics after filters: ${enriched.length}`);
+
       if (sortByPrice) {
         enriched.sort((a, b) =>
           sortByPrice === 'asc'
             ? a.averagePrice - b.averagePrice
             : b.averagePrice - a.averagePrice,
         );
+        console.log(`[2GIS] Clinics sorted by price: ${sortByPrice}`);
       }
 
       if (sortByRating) {
@@ -119,11 +142,16 @@ export class TwoGisClinicService {
           const bRating = b.rating ?? 0;
           return sortByRating === 'asc' ? aRating - bRating : bRating - aRating;
         });
+        console.log(`[2GIS] Clinics sorted by rating: ${sortByRating}`);
       }
 
       return enriched;
     } catch (error) {
-      console.error('2GIS API error:', error.response?.data || error.message);
+      console.error('[2GIS] API error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
       throw new Error('Ошибка при запросе в 2GIS');
     }
   }

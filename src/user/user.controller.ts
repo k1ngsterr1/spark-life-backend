@@ -144,9 +144,19 @@ export class UserController {
   @ApiBody({ type: AskAiAssistanceDto })
   @ApiResponse({
     status: 200,
-    description: 'AI generated general advice based on user query',
+    description:
+      'AI generated text and audio advice based on user query and profile',
+    schema: {
+      example: {
+        id: 'c67c1725-8a29-4b3a-9d87-1fef4769e1dc',
+        text: 'Здравствуйте! Вам следует обратиться к терапевту...',
+        audioPath: '/audio/c67c1725-8a29-4b3a-9d87-1fef4769e1dc.wav',
+        sender: 'ai',
+        timestamp: '2025-05-01T12:34:56.789Z',
+      },
+    },
   })
-  async askAiAssistance(@Body() dto: any) {
+  async askAiAssistance(@Body() dto: AskAiAssistanceDto) {
     return this.aiService.askAiAssistance(dto);
   }
 

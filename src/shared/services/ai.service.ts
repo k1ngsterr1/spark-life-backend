@@ -4,6 +4,9 @@ import OpenAI from 'openai';
 import { User } from '@prisma/client';
 import { AskAiAssistanceDto } from 'src/user/dto/ask-ai-assistance.dto';
 import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as textToSpeech from '@google-cloud/text-to-speech';
 
 @Injectable()
 export class AIService {
@@ -138,6 +141,7 @@ Age: ${user.age}
   async askAiAssistance(data: AskAiAssistanceDto): Promise<{
     id: string;
     text: string;
+    audioPath: string; // путь до сгенерированного аудиофайла
     sender: 'ai';
     timestamp: Date;
   }> {
@@ -150,7 +154,7 @@ User information:
 - Last Name: ${user.lastName || user.last_name || 'Unknown'}
 - Phone: ${user.phone || 'Unknown'}
 - Email: ${user.email || 'Unknown'}
-    `.trim();
+      `.trim();
 
       const response = await this.client.chat.completions.create({
         model: 'gpt-4-turbo',
@@ -162,7 +166,7 @@ You are an experienced AI assistant therapist with 30+ years of practice.
 You provide advice based on the user's personal medical background and contact details.
 Always consider user's name, age, gender, diseases and body parameters if available.
 Be empathetic, professional, clear, and focused on practical advice.
-          `.trim(),
+            `.trim(),
           },
           {
             role: 'user',
@@ -171,7 +175,7 @@ ${userInfo}
 
 User question:
 "${data.query}"
-          `.trim(),
+            `.trim(),
           },
         ],
         temperature: 0.2,
@@ -179,9 +183,20 @@ User question:
 
       const aiText = response.choices[0]?.message?.content || 'No response';
 
+      // 🔊 Step 2: Call Google TTS API
+      const ttsResponse = await this.synthesizeSpeech(aiText);
+
+      const audioId = uuidv4();
+      const audioPath = path.join(
+        __dirname,
+        `../../public/audio/${audioId}.wav`,
+      );
+      fs.writeFileSync(audioPath, Buffer.from(ttsResponse, 'base64'));
+
       return {
         id: uuidv4(),
         text: aiText,
+        audioPath: `/audio/${audioId}.wav`,
         sender: 'ai',
         timestamp: new Date(),
       };
@@ -189,6 +204,32 @@ User question:
       console.error('AIService askAiAssistance error:', error);
       throw new HttpException('Failed to get AI assistance', 500);
     }
+  }
+
+  private async synthesizeSpeech(text: string): Promise<string> {
+    const client = new textToSpeech.TextToSpeechClient({
+      keyFilename: path.join(__dirname, '../../keys/tts-key.json'),
+    });
+
+    const request: textToSpeech.protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
+      {
+        input: { text },
+        voice: {
+          languageCode: 'ru-RU',
+          name: 'ru-RU-Chirp3-HD-Charon',
+        },
+        audioConfig: {
+          audioEncoding: 'LINEAR16',
+        },
+      };
+
+    const [response] = await client.synthesizeSpeech(request);
+
+    if (!response.audioContent) {
+      throw new Error('No audio content returned from TTS');
+    }
+
+    return Buffer.from(response.audioContent as Buffer).toString('base64');
   }
 
   async aiStats(

@@ -27,6 +27,7 @@ async function bootstrap() {
   });
 
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
+  app.use('/audio', express.static(join(__dirname, '..', 'public/audio')));
 
   const config = new DocumentBuilder()
     .setTitle('Auth API')
