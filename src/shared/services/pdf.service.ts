@@ -9,7 +9,7 @@ export class PdfGeneratorService {
   private readonly fontRegular = path.join(
     process.cwd(),
     'fonts',
-    'Roboto-Regular.ttf',
+    'Roboto.ttf',
   );
   private readonly fontBold = path.join(
     process.cwd(),
