@@ -15,6 +15,7 @@ import { join } from 'path';
 import { DentalCheckModule } from './dental-check/dental-check.module';
 import { TwogisClinicsModule } from './2gis-clinics/2gis-clinics.module';
 import { AnalysisModule } from './analysis/analysis.module';
+import { RiskModule } from './risk/risk.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -36,6 +37,7 @@ import { AnalysisModule } from './analysis/analysis.module';
     }),
     TwogisClinicsModule,
     AnalysisModule,
+    RiskModule,
   ],
 })
 export class AppModule {}

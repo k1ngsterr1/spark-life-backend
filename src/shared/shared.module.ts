@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailService } from './services/email.service';
 import { AIService } from './services/ai.service';
 import { AuthModule } from 'src/auth/auth.module';
+import { PdfGeneratorService } from './services/pdf.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AuthModule } from 'src/auth/auth.module';
     ConfigService,
     EmailService,
     AIService,
+    PdfGeneratorService,
   ],
   exports: [
     JwtStrategy,
@@ -30,6 +32,7 @@ import { AuthModule } from 'src/auth/auth.module';
     ConfigService,
     EmailService,
     AIService,
+    PdfGeneratorService,
   ],
 })
 export class SharedModule {}
