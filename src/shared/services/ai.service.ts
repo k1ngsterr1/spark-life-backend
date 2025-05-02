@@ -8,6 +8,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as textToSpeech from '@google-cloud/text-to-speech';
 
+interface RiskProfileData {
+  risk_score: number;
+  risk_factors: Array<{
+    source: string;
+    label: string;
+    weight: number;
+  }>;
+}
+
 @Injectable()
 export class AIService {
   private client: OpenAI;
@@ -586,7 +595,7 @@ ${JSON.stringify(result.predictions, null, 2)}
     }
   }
 
-  async generateRiskProfile(userId: number): Promise<void> {
+  async generateRiskProfile(userId: number): Promise<RiskProfileData> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -600,7 +609,7 @@ ${JSON.stringify(result.predictions, null, 2)}
 
     const prompt = `
 Ты — опытный врач. Оцени уровень общего риска на основе данных пользователя.
-Верни JSON строго по шаблону:
+Верни JSON строго по шаблону напиши максимально подробный отчет:
 
 {
   "risk_score": 0.76,
@@ -612,11 +621,11 @@ ${JSON.stringify(result.predictions, null, 2)}
 
 Исходные данные:
 Возраст: ${user.age}
-Рост: ${user.height}
-Вес: ${user.weight}
-Болезни: ${user.diseases.join(', ') || 'нет'}
-SkinCheck: ${user.skinChecks?.[0] ? user.skinChecks[0].risk_description : 'нет'}
-Anxiety: ${user.anxietyChecks?.[0] ? user.anxietyChecks[0].summary : 'нет'}
+Рост: ${user.height?.toString() || 'не указан'}
+Вес: ${user.weight?.toString() || 'не указан'}
+Болезни: ${user.diseases?.join(', ') || 'нет'}
+SkinCheck: ${user.skinChecks?.[0]?.risk_description || 'нет данных'}
+Anxiety: ${user.anxietyChecks?.[0]?.summary || 'нет данных'}
 Анализ крови: ${JSON.stringify(user.medicalAnalyses?.[0]?.result || {})}
 `;
 
@@ -630,12 +639,13 @@ Anxiety: ${user.anxietyChecks?.[0] ? user.anxietyChecks[0].summary : 'нет'}
         { role: 'user', content: prompt },
       ],
       temperature: 0.2,
+      response_format: { type: 'json_object' }, // Ensure JSON response
     });
 
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error('Empty AI response');
 
-    const parsed = JSON.parse(content);
+    const parsed: RiskProfileData = JSON.parse(content);
 
     await this.prisma.riskProfile.upsert({
       where: { user_id: userId },
@@ -651,5 +661,6 @@ Anxiety: ${user.anxietyChecks?.[0] ? user.anxietyChecks[0].summary : 'нет'}
     });
 
     console.log(`✅ Risk profile updated for user ${userId}`);
+    return parsed; // Return the parsed risk data
   }
 }
