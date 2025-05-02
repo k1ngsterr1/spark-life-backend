@@ -604,12 +604,11 @@ ${JSON.stringify(result.predictions, null, 2)}
         medicalAnalyses: { orderBy: { created_at: 'desc' }, take: 1 },
       },
     });
-
     if (!user) throw new Error('User not found');
 
     const prompt = `
 Ты — опытный врач. Оцени уровень общего риска на основе данных пользователя.
-Верни JSON строго по шаблону напиши максимально подробный отчет:
+Верни JSON строго по шаблону (максимально подробный отчет):
 
 {
   "risk_score": 0.76,
@@ -629,6 +628,7 @@ Anxiety: ${user.anxietyChecks?.[0]?.summary || 'нет данных'}
 Анализ крови: ${JSON.stringify(user.medicalAnalyses?.[0]?.result || {})}
 `;
 
+    // 1) Call the chat endpoint WITHOUT response_format
     const response = await this.client.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -639,28 +639,37 @@ Anxiety: ${user.anxietyChecks?.[0]?.summary || 'нет данных'}
         { role: 'user', content: prompt },
       ],
       temperature: 0.2,
-      response_format: { type: 'json_object' }, // Ensure JSON response
     });
 
+    // 2) Extract and parse the raw JSON string
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error('Empty AI response');
 
-    const parsed: RiskProfileData = JSON.parse(content);
+    let parsed: RiskProfileData;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      throw new Error(
+        `Failed to parse AI JSON: ${e.message}\n\nResponse was:\n${content}`,
+      );
+    }
 
+    // 3) Persist to Prisma
     await this.prisma.riskProfile.upsert({
       where: { user_id: userId },
       update: {
         risk_score: parsed.risk_score,
-        risk_factors: parsed.risk_factors,
+        risk_factors: parsed.risk_factors as any,
+        updated_at: new Date(),
       },
       create: {
         user_id: userId,
         risk_score: parsed.risk_score,
-        risk_factors: parsed.risk_factors,
+        risk_factors: parsed.risk_factors as any,
       },
     });
 
     console.log(`✅ Risk profile updated for user ${userId}`);
-    return parsed; // Return the parsed risk data
+    return parsed;
   }
 }
