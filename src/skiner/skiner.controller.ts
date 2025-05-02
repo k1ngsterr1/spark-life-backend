@@ -55,10 +55,8 @@ export class SkiniverController {
     const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
     fs.mkdirSync(uploadDir, { recursive: true });
     fs.writeFileSync(filePath, file.buffer);
-
     const result = await this.skiniverService.predict(file);
     const gradcamPath = await this.skiniverService.generateGradcam(filePath);
-
     await this.skiniverService.saveSkinCheck(req.user.id, result);
 
     return {
