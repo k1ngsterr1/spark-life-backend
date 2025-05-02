@@ -1,9 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { writeFile } from 'fs/promises';
+import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 import { PrismaService } from 'src/shared/services/prisma.service';
 import { AIService } from 'src/shared/services/ai.service';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 @Injectable()
 export class DentalCheckService {
@@ -27,16 +32,18 @@ export class DentalCheckService {
     const extension = mimeType.split('/')[1];
 
     try {
-      // 1. Сохраняем изображение
       const fileName = `${Date.now()}.${extension}`;
       const filePath = path.resolve('uploads', fileName);
       const buffer = Buffer.from(base64Data, 'base64');
       await writeFile(filePath, buffer);
 
-      // 2. Генерируем публичный URL
+      const gradcamPath = await this.generateGradcam(filePath);
+      const gradcamUrl = gradcamPath
+        ? `https://spark-life-backend-production.up.railway.app/uploads/${path.basename(gradcamPath)}`
+        : null;
+
       const publicUrl = `https://spark-life-backend-production.up.railway.app/uploads/${fileName}`;
 
-      // 3. Отправляем ссылку на изображение в Roboflow
       const { data } = await axios.post(this.roboflowUrl, null, {
         params: {
           api_key: this.roboflowApiKey,
@@ -44,7 +51,6 @@ export class DentalCheckService {
         },
       });
 
-      // 4. Сохраняем результат
       const result = await this.prisma.dentalCheck.create({
         data: {
           user_id: userId,
@@ -53,7 +59,6 @@ export class DentalCheckService {
         },
       });
 
-      // 5. AI пояснение
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       const explanation = await this.aiService.explainDentalCheckResultRu(
         user,
@@ -63,12 +68,37 @@ export class DentalCheckService {
       return {
         ...result,
         explanation,
+        gradcam: gradcamUrl,
       };
     } catch (error) {
       console.error('Roboflow error:', error.response?.data || error.message);
       throw new BadRequestException(
         error.response?.data?.message || 'Ошибка анализа зубов',
       );
+    }
+  }
+
+  private async generateGradcam(imagePath: string): Promise<string | null> {
+    const scriptPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'scripts',
+      'fakeGradcam.js',
+    );
+
+    try {
+      const { stdout } = await execFileAsync('node', [scriptPath, imagePath]);
+      const gradcamPath = stdout.trim();
+
+      if (!fs.existsSync(gradcamPath)) {
+        throw new Error('Grad-CAM image not found');
+      }
+
+      return gradcamPath;
+    } catch (error) {
+      console.error('[Dental GradCAM Error]', error.message);
+      return null;
     }
   }
 }
