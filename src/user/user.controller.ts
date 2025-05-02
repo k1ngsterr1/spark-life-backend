@@ -247,31 +247,4 @@ export class UserController {
       userLanguage,
     );
   }
-
-  @Get('ai-risk-profile')
-  @ApiOperation({
-    summary: 'Generate and get AI-based Risk Profile for user',
-    description:
-      'Aggregates user data and generates a risk score with factors using AI',
-  })
-  @ApiBearerAuth()
-  async getRiskProfile(@Request() request) {
-    try {
-      const userId = request.user.id;
-
-      // Генерация и обновление risk-профиля
-      await this.aiService.generateRiskProfile(userId);
-
-      // Возврат актуального профиля
-      return await this.prisma.riskProfile.findUnique({
-        where: { user_id: userId },
-      });
-    } catch (error) {
-      console.error('getRiskProfile error:', error.message);
-      throw new HttpException(
-        'Failed to generate risk profile',
-        error.status || 500,
-      );
-    }
-  }
 }
