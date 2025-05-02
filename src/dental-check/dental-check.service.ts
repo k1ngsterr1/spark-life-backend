@@ -79,14 +79,7 @@ export class DentalCheckService {
   }
 
   private async generateGradcam(imagePath: string): Promise<string | null> {
-    const scriptPath = path.join(
-      __dirname,
-      '..',
-      '..',
-      'scripts',
-      'gradcam.js',
-    );
-
+    const scriptPath = path.join(process.cwd(), 'script', 'gradcam.js');
     try {
       const { stdout } = await execFileAsync('node', [scriptPath, imagePath]);
       const gradcamPath = stdout.trim();
