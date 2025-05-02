@@ -39,10 +39,10 @@ export class DentalCheckService {
 
       const gradcamPath = await this.generateGradcam(filePath);
       const gradcamUrl = gradcamPath
-        ? `https://spark-life-backend-production.up.railway.app/uploads/${path.basename(gradcamPath)}`
+        ? `https://spark-life-backend-production-d81a.up.railway.app//uploads/${path.basename(gradcamPath)}`
         : null;
 
-      const publicUrl = `https://spark-life-backend-production.up.railway.app/uploads/${fileName}`;
+      const publicUrl = `https://spark-life-backend-production-d81a.up.railway.app//uploads/${fileName}`;
 
       const { data } = await axios.post(this.roboflowUrl, null, {
         params: {

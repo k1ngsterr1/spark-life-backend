@@ -65,7 +65,7 @@ export class SkiniverController {
       status: 'ok',
       result,
       gradcam: gradcamPath
-        ? `https://spark-life-backend-production.up.railway.app/uploads/${path.basename(gradcamPath)}`
+        ? `https://spark-life-backend-production-d81a.up.railway.app/uploads/${path.basename(gradcamPath)}`
         : null,
     };
   }
