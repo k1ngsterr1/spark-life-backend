@@ -3,9 +3,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 const PDFDocument = require('pdfkit');
 
+export interface ExtendedRiskProfileData {
+  risk_score: number;
+  risk_level: 'Низкий' | 'Средний' | 'Высокий';
+  risk_category: string;
+  risk_factors: Array<{
+    source: string;
+    label: string;
+    weight: number;
+    impact_description: string;
+  }>;
+  summary: string;
+  recommendations: string[];
+  follow_up_tests: string[];
+  generated_at: string; // ISO timestamp
+}
+
 @Injectable()
 export class PdfGeneratorService {
-  private readonly outputDir = path.join(process.cwd(), 'uploads');
+  private readonly outputDir = path.join(__dirname, '..', '..', 'uploads');
   private readonly fontRegular = path.join(
     process.cwd(),
     'fonts',
@@ -21,7 +37,7 @@ export class PdfGeneratorService {
     this.ensureOutputDirectoryExists();
   }
 
-  private ensureOutputDirectoryExists(): void {
+  private ensureOutputDirectoryExists() {
     if (!fs.existsSync(this.outputDir)) {
       fs.mkdirSync(this.outputDir, { recursive: true });
     }
@@ -35,17 +51,14 @@ export class PdfGeneratorService {
       weight?: number;
       diseases?: string[];
     },
-    riskData: {
-      risk_score: number;
-      risk_factors: Array<{ source: string; label: string; weight: number }>;
-    },
+    riskData: any,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
-        // 1) Create document with A4 and margins
+        // 1) Create doc
         const doc = new PDFDocument({
           size: 'A4',
-          margins: { top: 72, bottom: 72, left: 72, right: 72 },
+          margins: { top: 80, bottom: 72, left: 72, right: 72 },
         });
 
         // 2) Register fonts
@@ -63,31 +76,21 @@ export class PdfGeneratorService {
 
         // ── HEADER ─────────────────────────────────────────────────────────
         doc.fillColor('#2C3E50').rect(0, 0, doc.page.width, 80).fill();
-
         doc
           .fillColor('#FFFFFF')
           .font('Bold')
           .fontSize(20)
-          .text('SPARK HEALTH', 72, 24, { align: 'left' });
-
-        doc
-          .fillColor('#FFFFFF')
-          .font('Bold')
-          .fontSize(18)
-          .text('Медицинский отчёт о рисках', 0, 28, { align: 'center' });
-
-        doc
+          .text('SPARK HEALTH', 72, 24, { align: 'left' })
+          .text('Медицинский отчёт о рисках', 0, 28, { align: 'center' })
           .font('Regular')
           .fontSize(10)
           .text('Конфиденциальный документ', 0, 50, { align: 'center' });
-
         doc
           .moveTo(72, 82)
           .lineTo(doc.page.width - 72, 82)
           .strokeColor('#3498DB')
           .lineWidth(2)
           .stroke();
-
         doc.moveDown(4);
         // ── END HEADER ──────────────────────────────────────────────────────
 
@@ -96,90 +99,134 @@ export class PdfGeneratorService {
           .fillColor('#2C3E50')
           .font('Bold')
           .fontSize(14)
-          .text('1. Данные пациента', { continued: true })
+          .text('1. Данные пациента')
+          .moveDown(0.5)
           .font('Regular')
-          .fontSize(12)
-          .text(`  ID: ${userId}`)
-          .moveDown(0.5);
-
+          .fontSize(12);
         const infoLines = [
+          `ID: ${userId}`,
           `Возраст: ${userData.age ?? 'не указан'}`,
           `Рост: ${userData.height ?? 'не указан'} см`,
           `Вес: ${userData.weight ?? 'не указан'} кг`,
           `Заболевания: ${userData.diseases?.join(', ') ?? 'не указаны'}`,
         ];
         infoLines.forEach((line) => doc.text(`• ${line}`));
-        doc.moveDown(1);
+        doc.moveDown(1.5);
         // ── END PATIENT INFO ───────────────────────────────────────────────
 
-        // ── RISK ASSESSMENT ────────────────────────────────────────────────
-        const scorePct = (riskData.risk_score * 100).toFixed(1);
-        const riskLevel = this.getRiskLevel(riskData.risk_score);
-        const levelColor = this.getRiskColor(riskData.risk_score);
-
+        // ── RISK OVERVIEW ──────────────────────────────────────────────────
         doc
-          .fillColor(levelColor)
           .font('Bold')
-          .fontSize(16)
-          .text(`${scorePct}%`, { continued: true })
+          .fontSize(14)
+          .fillColor('#2C3E50')
+          .text('2. Общая оценка риска')
+          .moveDown(0.5);
+        const pct = (riskData.risk_score * 100).toFixed(1);
+        doc
+          .font('Bold')
+          .fontSize(20)
+          .fillColor(this.getRiskColor(riskData.risk_score))
+          .text(`${pct}%`, { continued: true })
           .font('Regular')
           .fontSize(12)
           .fillColor('#2C3E50')
-          .text(`  (${riskLevel})`)
-          .moveDown(1.5);
-        // ── END RISK ASSESSMENT ───────────────────────────────────────────
+          .text(
+            `  (${riskData.risk_level}, категория: ${riskData.risk_category})`,
+          );
+        doc.moveDown(1.5);
+        // ── END RISK OVERVIEW ──────────────────────────────────────────────
 
         // ── RISK FACTORS ───────────────────────────────────────────────────
         doc
           .font('Bold')
           .fontSize(14)
           .fillColor('#2C3E50')
-          .text('2. Факторы риска')
-          .moveDown(0.5);
-
-        doc.font('Regular').fontSize(12);
+          .text('3. Факторы риска')
+          .moveDown(0.5)
+          .font('Regular')
+          .fontSize(12);
         riskData.risk_factors.forEach((f, i) => {
-          const pct = (f.weight * 100).toFixed(1) + '%';
+          const weightPct = (f.weight * 100).toFixed(1) + '%';
           doc
             .fillColor('#34495E')
             .text(`${i + 1}. ${f.label}`, { continued: true })
             .fillColor('#7F8C8D')
-            .text(` (${this.translateSource(f.source)})`, { continued: true })
-            .fillColor(levelColor)
-            .text(` — ${pct}`);
+            .text(` (${f.source})`, { continued: true })
+            .fillColor(this.getRiskColor(riskData.risk_score))
+            .text(` — ${weightPct}`)
+            .moveDown(0.3);
+          doc
+            .fillColor('#2C3E50')
+            .fontSize(10)
+            .text(`   Описание влияния: ${f.impact_description}`)
+            .moveDown(0.7);
+          doc.fontSize(12);
         });
-        doc.moveDown(1.5);
-        // ── END RISK FACTORS ──────────────────────────────────────────────
+        doc.moveDown(1);
+        // ── END RISK FACTORS ───────────────────────────────────────────────
+
+        // ── SUMMARY ────────────────────────────────────────────────────────
+        doc
+          .font('Bold')
+          .fontSize(14)
+          .fillColor('#2C3E50')
+          .text('4. Краткое резюме')
+          .moveDown(0.5)
+          .font('Regular')
+          .fontSize(12)
+          .fillColor('#2C3E50')
+          .text(riskData.summary, { align: 'justify' })
+          .moveDown(1.5);
+        // ── END SUMMARY ───────────────────────────────────────────────────
 
         // ── RECOMMENDATIONS ───────────────────────────────────────────────
         doc
           .font('Bold')
           .fontSize(14)
           .fillColor('#2C3E50')
-          .text('3. Рекомендации')
-          .moveDown(0.5);
-
-        doc.font('Regular').fontSize(12);
-        this.getRecommendation(riskData.risk_score)
-          .split('\n')
-          .forEach((line) => {
-            doc
-              .circle(doc.x - 6, doc.y + 6, 3)
-              .fill(levelColor)
-              .fillColor('#2C3E50')
-              .text(`  ${line}`)
-              .moveDown(0.5);
-          });
+          .text('5. Рекомендации')
+          .moveDown(0.5)
+          .font('Regular')
+          .fontSize(12);
+        riskData.recommendations.forEach((rec) => {
+          doc
+            .circle(doc.x - 6, doc.y + 6, 3)
+            .fill(this.getRiskColor(riskData.risk_score))
+            .fillColor('#2C3E50')
+            .text(`  ${rec}`)
+            .moveDown(0.5);
+        });
+        doc.moveDown(1);
         // ── END RECOMMENDATIONS ──────────────────────────────────────────
+
+        // ── FOLLOW-UP TESTS ───────────────────────────────────────────────
+        doc
+          .font('Bold')
+          .fontSize(14)
+          .fillColor('#2C3E50')
+          .text('6. Рекомендуемые обследования')
+          .moveDown(0.5)
+          .font('Regular')
+          .fontSize(12);
+        riskData.follow_up_tests.forEach((test) => {
+          doc.text(`• ${test}`).moveDown(0.3);
+        });
+        doc.moveDown(1.5);
+        // ── END FOLLOW-UP TESTS ──────────────────────────────────────────
 
         // ── FOOTER ────────────────────────────────────────────────────────
         const bottom = doc.page.height - 40;
         doc
           .fontSize(10)
           .fillColor('#95A5A6')
-          .text(`Дата: ${new Date().toLocaleDateString('ru-RU')}`, 72, bottom, {
-            continued: true,
-          })
+          .text(
+            `Сгенерировано: ${new Date(riskData.generated_at).toLocaleString('ru-RU')}`,
+            72,
+            bottom,
+            {
+              continued: true,
+            },
+          )
           .text(` – Страница ${doc.page.number}`, {
             align: 'right',
             width: doc.page.width - 144,
@@ -196,9 +243,9 @@ export class PdfGeneratorService {
   }
 
   private getRiskColor(score: number): string {
-    if (score > 0.7) return '#E74C3C';
-    if (score > 0.4) return '#E67E22';
-    return '#27AE60';
+    if (score > 0.7) return '#E74C3C'; // red
+    if (score > 0.4) return '#E67E22'; // orange
+    return '#27AE60'; // green
   }
 
   private getRiskLevel(score: number): string {
@@ -216,25 +263,5 @@ export class PdfGeneratorService {
       Cholesterol: 'Холестерин',
     };
     return map[source] || source;
-  }
-
-  private getRecommendation(score: number): string {
-    if (score > 0.7) {
-      return [
-        'Обратитесь к врачу как можно скорее',
-        'Пройдите углублённые обследования',
-        'Следуйте рекомендациям специалиста',
-      ].join('\n');
-    }
-    if (score > 0.4) {
-      return [
-        'Запланируйте плановый осмотр',
-        'Контролируйте основные показатели',
-      ].join('\n');
-    }
-    return [
-      'Продолжайте вести здоровый образ жизни',
-      'Профилактические осмотры раз в год',
-    ].join('\n');
   }
 }

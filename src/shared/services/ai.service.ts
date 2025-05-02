@@ -8,13 +8,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as textToSpeech from '@google-cloud/text-to-speech';
 
-interface RiskProfileData {
+interface ExtendedRiskProfileData {
   risk_score: number;
+  risk_level: 'Низкий' | 'Средний' | 'Высокий';
+  risk_category: string;
   risk_factors: Array<{
     source: string;
     label: string;
     weight: number;
+    impact_description: string;
   }>;
+  summary: string;
+  recommendations: string[];
+  follow_up_tests: string[];
+  generated_at: string;
 }
 
 @Injectable()
@@ -595,7 +602,7 @@ ${JSON.stringify(result.predictions, null, 2)}
     }
   }
 
-  async generateRiskProfile(userId: number): Promise<RiskProfileData> {
+  async generateRiskProfile(userId: number): Promise<ExtendedRiskProfileData> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -606,55 +613,60 @@ ${JSON.stringify(result.predictions, null, 2)}
     });
     if (!user) throw new Error('User not found');
 
+    // 3) A beefy prompt asking for all fields:
     const prompt = `
-Ты — опытный врач. Оцени уровень общего риска на основе данных пользователя.
-Верни JSON строго по шаблону (максимально подробный отчет):
+Ты — опытный врач-аналитик. На основе следующих данных пациента:
+- Возраст: ${user.age ?? 'не указан'}
+- Рост: ${user.height?.toString() || 'не указан'} см
+- Вес: ${user.weight?.toString() || 'не указан'} кг
+- Заболевания: ${user.diseases?.join(', ') || 'нет'}
+- SkinCheck: ${user.skinChecks?.[0]?.risk_description || 'нет данных'}
+- AnxietyCheck: ${user.anxietyChecks?.[0]?.summary || 'нет данных'}
+- MedicalAnalysis: ${JSON.stringify(user.medicalAnalyses?.[0]?.result || {})}
+
+Верни **ОГРОМНЫЙ** JSON строго по этой схеме (никаких пояснений, только JSON):
 
 {
-  "risk_score": 0.76,
+  "risk_score": number,        
+  "risk_level": "Низкий"|"Средний"|"Высокий",
+  "risk_category": string,     
   "risk_factors": [
-    { "source": "SkinCheck", "label": "Подозрение на меланому", "weight": 0.8 },
-    { "source": "Anxiety", "label": "Высокий уровень тревожности", "weight": 0.6 }
-  ]
+    { "source": string, "label": string, "weight": number, "impact_description": string },
+    ...
+  ],
+  "summary": string,           
+  "recommendations": [string], 
+  "follow_up_tests": [string],
+  "generated_at": string       // текущий ISO timestamp
 }
+`.trim();
 
-Исходные данные:
-Возраст: ${user.age}
-Рост: ${user.height?.toString() || 'не указан'}
-Вес: ${user.weight?.toString() || 'не указан'}
-Болезни: ${user.diseases?.join(', ') || 'нет'}
-SkinCheck: ${user.skinChecks?.[0]?.risk_description || 'нет данных'}
-Anxiety: ${user.anxietyChecks?.[0]?.summary || 'нет данных'}
-Анализ крови: ${JSON.stringify(user.medicalAnalyses?.[0]?.result || {})}
-`;
-
-    // 1) Call the chat endpoint WITHOUT response_format
+    // 4) Call the Chat API
     const response = await this.client.chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
           role: 'system',
-          content: 'Ты медицинский ассистент. Отвечай строго в JSON.',
+          content: 'Ты медицинский ассистент. Отвечай строго JSON.',
         },
         { role: 'user', content: prompt },
       ],
       temperature: 0.2,
     });
 
-    // 2) Extract and parse the raw JSON string
     const content = response.choices[0]?.message?.content;
     if (!content) throw new Error('Empty AI response');
 
-    let parsed: RiskProfileData;
+    let parsed: ExtendedRiskProfileData;
     try {
       parsed = JSON.parse(content);
     } catch (e) {
       throw new Error(
-        `Failed to parse AI JSON: ${e.message}\n\nResponse was:\n${content}`,
+        `Failed to parse JSON: ${e.message}\n\nResponse:\n${content}`,
       );
     }
 
-    // 3) Persist to Prisma
+    // 5) (Optionally) persist only the fields you care about, e.g. risk_score + risk_factors
     await this.prisma.riskProfile.upsert({
       where: { user_id: userId },
       update: {
@@ -669,7 +681,9 @@ Anxiety: ${user.anxietyChecks?.[0]?.summary || 'нет данных'}
       },
     });
 
-    console.log(`✅ Risk profile updated for user ${userId}`);
+    console.log(
+      `✅ Extended risk profile for user ${userId} generated_at ${parsed.generated_at}`,
+    );
     return parsed;
   }
 }
