@@ -585,4 +585,71 @@ ${JSON.stringify(result.predictions, null, 2)}
       throw new HttpException('Ошибка при анализе изображения', 500);
     }
   }
+
+  async generateRiskProfile(userId: number): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        skinChecks: { orderBy: { check_datetime: 'desc' }, take: 1 },
+        anxietyChecks: { orderBy: { created_at: 'desc' }, take: 1 },
+        medicalAnalyses: { orderBy: { created_at: 'desc' }, take: 1 },
+      },
+    });
+
+    if (!user) throw new Error('User not found');
+
+    const prompt = `
+Ты — опытный врач. Оцени уровень общего риска на основе данных пользователя.
+Верни JSON строго по шаблону:
+
+{
+  "risk_score": 0.76,
+  "risk_factors": [
+    { "source": "SkinCheck", "label": "Подозрение на меланому", "weight": 0.8 },
+    { "source": "Anxiety", "label": "Высокий уровень тревожности", "weight": 0.6 }
+  ]
+}
+
+Исходные данные:
+Возраст: ${user.age}
+Рост: ${user.height}
+Вес: ${user.weight}
+Болезни: ${user.diseases.join(', ') || 'нет'}
+SkinCheck: ${user.skinChecks?.[0] ? user.skinChecks[0].risk_description : 'нет'}
+Anxiety: ${user.anxietyChecks?.[0] ? user.anxietyChecks[0].summary : 'нет'}
+Анализ крови: ${JSON.stringify(user.medicalAnalyses?.[0]?.result || {})}
+`;
+
+    const response = await this.client.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'Ты медицинский ассистент. Отвечай строго в JSON.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.2,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error('Empty AI response');
+
+    const parsed = JSON.parse(content);
+
+    await this.prisma.riskProfile.upsert({
+      where: { user_id: userId },
+      update: {
+        risk_score: parsed.risk_score,
+        risk_factors: parsed.risk_factors,
+      },
+      create: {
+        user_id: userId,
+        risk_score: parsed.risk_score,
+        risk_factors: parsed.risk_factors,
+      },
+    });
+
+    console.log(`✅ Risk profile updated for user ${userId}`);
+  }
 }
