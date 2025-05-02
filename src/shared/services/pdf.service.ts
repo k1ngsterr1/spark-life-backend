@@ -61,11 +61,17 @@ export class PdfGeneratorService {
           margins: { top: 80, bottom: 72, left: 72, right: 72 },
         });
 
-        // 2) Register fonts
-        [this.fontRegular, this.fontBold].forEach((fp, i) => {
-          if (!fs.existsSync(fp)) throw new Error(`Font not found: ${fp}`);
-          doc.registerFont(i === 0 ? 'Regular' : 'Bold', fp);
-        });
+        if (!fs.existsSync(this.fontRegular)) {
+          throw new Error(`Font not found: ${this.fontRegular}`);
+        }
+        doc.registerFont('Regular', this.fontRegular);
+
+        if (!fs.existsSync(this.fontBold)) {
+          throw new Error(`Font not found: ${this.fontBold}`);
+        }
+        doc.registerFont('Bold', this.fontBold);
+
+        // Set default font
         doc.font('Regular');
 
         // 3) Pipe to file
