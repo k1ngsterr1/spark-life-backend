@@ -53,8 +53,8 @@ export class RiskService {
 
     const userDataForPdf = {
       age: user.age,
-      height: user.height?.toNumber() || null, // Convert Decimal to number
-      weight: user.weight?.toNumber() || null, // Convert Decimal to number
+      height: user.height?.toNumber() || null,
+      weight: user.weight?.toNumber() || null,
       diseases: user.diseases,
     };
 
