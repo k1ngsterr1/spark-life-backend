@@ -5,6 +5,7 @@ import {
   UseGuards,
   ParseIntPipe,
   Request,
+  Get,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -23,7 +24,7 @@ import { RiskService } from './risk.service';
 export class RiskController {
   constructor(private readonly riskService: RiskService) {}
 
-  @Post('calculate/:userId')
+  @Post('calculate')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Calculate and update the risk profile for a user' })
   @ApiResponse({
@@ -37,5 +38,33 @@ export class RiskController {
   })
   async calculateRisk(@Request() req): Promise<any> {
     return this.riskService.calculateRiskProfile(req.user.id);
+  }
+
+  @Get('report')
+  @ApiOperation({
+    summary: 'Get the URL of the risk report PDF for the authenticated user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a JSON with the public URL of the PDF.',
+    schema: {
+      example: {
+        url: 'https://api.example.com/uploads/medical_report_42_1683038400000.pdf',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Risk profile or report not found.',
+  })
+  async getRiskReport(@Request() req): Promise<{ url: string }> {
+    const userId = req.user.id;
+    const { filename } = await this.riskService.getRiskReport(userId);
+
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const url = `https://spark-life-backend-production-d81a.up.railway.app/uploads/${filename}`;
+
+    return { url };
   }
 }

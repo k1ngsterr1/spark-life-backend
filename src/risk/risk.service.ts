@@ -88,14 +88,12 @@ export class RiskService {
     };
   }
 
-  async getRiskReport(userId: number): Promise<{ pdfPath: string }> {
+  async getRiskReport(userId: number): Promise<{ filename: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
         riskProfile: {
-          select: {
-            updated_at: true,
-          },
+          select: { updated_at: true },
         },
       },
     });
@@ -104,9 +102,8 @@ export class RiskService {
       throw new Error('Risk profile not found. Please generate it first.');
     }
 
-    // Construct the path based on your storage pattern
-    const pdfPath = `reports/risk_report_${userId}_${user.riskProfile.updated_at.getTime()}.pdf`;
-
-    return { pdfPath };
+    // match the name of the file you generate in PdfGeneratorService:
+    const filename = `medical_report_${userId}_${user.riskProfile.updated_at.getTime()}.pdf`;
+    return { filename };
   }
 }
