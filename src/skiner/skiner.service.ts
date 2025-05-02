@@ -77,7 +77,7 @@ export class SkiniverService {
       '..',
       '..',
       'scripts',
-      'fakeGradcam.js',
+      'gradcam.js',
     );
 
     try {
