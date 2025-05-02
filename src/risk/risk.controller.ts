@@ -41,6 +41,7 @@ export class RiskController {
   }
 
   @Get('report')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({
     summary: 'Get the URL of the risk report PDF for the authenticated user',
   })
