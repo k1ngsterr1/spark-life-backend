@@ -21,7 +21,7 @@ export interface ExtendedRiskProfileData {
 
 @Injectable()
 export class PdfGeneratorService {
-  private readonly outputDir = path.join(__dirname, '..', '..', 'uploads');
+  private readonly outputDir = path.join(process.cwd(), 'uploads');
   private readonly fontRegular = path.join(
     process.cwd(),
     'fonts',
