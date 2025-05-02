@@ -9,7 +9,7 @@
     "node": "22"
   },
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && cp -r fonts dist/fonts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
