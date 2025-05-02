@@ -84,7 +84,7 @@ export class DentalCheckService {
       '..',
       '..',
       'scripts',
-      'fakeGradcam.js',
+      'gradcam.js',
     );
 
     try {
