@@ -543,9 +543,17 @@ ${JSON.stringify(result.predictions, null, 2)}
           .trim();
       }
 
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.error(
+          '[diagnoseFromAnalysisImage] JSON-объект не найден в тексте',
+        );
+        throw new HttpException('JSON не найден в ответе', 500);
+      }
+
       let result;
       try {
-        result = JSON.parse(cleanedText);
+        result = JSON.parse(jsonMatch[0]);
       } catch (err) {
         console.error('[diagnoseFromAnalysisImage] Ошибка парсинга JSON:', err);
         throw new HttpException('Ошибка парсинга JSON', 500);
