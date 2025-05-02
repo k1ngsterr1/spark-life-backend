@@ -73,6 +73,7 @@ export class SkiniverService {
 
   async generateGradcam(imagePath: string): Promise<string | null> {
     const scriptPath = path.join(process.cwd(), 'script', 'gradcam.js');
+
     try {
       const { stdout } = await execFileAsync('node', [scriptPath, imagePath]);
       const gradcamPath = stdout.trim();
