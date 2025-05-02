@@ -51,11 +51,10 @@ export class PdfGeneratorService {
       weight?: number;
       diseases?: string[];
     },
-    riskData: any,
+    riskData: ExtendedRiskProfileData,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
-        // 1) Create doc
         const doc = new PDFDocument({
           size: 'A4',
           margins: { top: 80, bottom: 72, left: 72, right: 72 },
@@ -71,16 +70,14 @@ export class PdfGeneratorService {
         }
         doc.registerFont('Bold', this.fontBold);
 
-        // Set default font
         doc.font('Regular');
 
-        // 3) Pipe to file
         const filename = `medical_report_${userId}_${Date.now()}.pdf`;
         const filepath = path.join(this.outputDir, filename);
         const stream = fs.createWriteStream(filepath);
         doc.pipe(stream);
 
-        // ── HEADER ─────────────────────────────────────────────────────────
+        // ── HEADER ─
         doc.fillColor('#2C3E50').rect(0, 0, doc.page.width, 80).fill();
         doc
           .fillColor('#FFFFFF')
@@ -91,6 +88,7 @@ export class PdfGeneratorService {
           .font('Regular')
           .fontSize(10)
           .text('Конфиденциальный документ', 0, 50, { align: 'center' });
+
         doc
           .moveTo(72, 82)
           .lineTo(doc.page.width - 72, 82)
@@ -98,9 +96,8 @@ export class PdfGeneratorService {
           .lineWidth(2)
           .stroke();
         doc.moveDown(4);
-        // ── END HEADER ──────────────────────────────────────────────────────
 
-        // ── PATIENT INFO ───────────────────────────────────────────────────
+        // ── PATIENT INFO ─
         doc
           .fillColor('#2C3E50')
           .font('Bold')
@@ -109,6 +106,7 @@ export class PdfGeneratorService {
           .moveDown(0.5)
           .font('Regular')
           .fontSize(12);
+
         const infoLines = [
           `ID: ${userId}`,
           `Возраст: ${userData.age ?? 'не указан'}`,
@@ -116,17 +114,21 @@ export class PdfGeneratorService {
           `Вес: ${userData.weight ?? 'не указан'} кг`,
           `Заболевания: ${userData.diseases?.join(', ') ?? 'не указаны'}`,
         ];
-        infoLines.forEach((line) => doc.text(`• ${line}`));
-        doc.moveDown(1.5);
-        // ── END PATIENT INFO ───────────────────────────────────────────────
 
-        // ── RISK OVERVIEW ──────────────────────────────────────────────────
+        for (const line of infoLines) {
+          doc.text(`• ${line}`);
+        }
+
+        doc.moveDown(1.5);
+
+        // ── RISK OVERVIEW ─
         doc
           .font('Bold')
           .fontSize(14)
           .fillColor('#2C3E50')
           .text('2. Общая оценка риска')
           .moveDown(0.5);
+
         const pct = (riskData.risk_score * 100).toFixed(1);
         doc
           .font('Bold')
@@ -139,10 +141,10 @@ export class PdfGeneratorService {
           .text(
             `  (${riskData.risk_level}, категория: ${riskData.risk_category})`,
           );
-        doc.moveDown(1.5);
-        // ── END RISK OVERVIEW ──────────────────────────────────────────────
 
-        // ── RISK FACTORS ───────────────────────────────────────────────────
+        doc.moveDown(1.5);
+
+        // ── RISK FACTORS ─
         doc
           .font('Bold')
           .fontSize(14)
@@ -151,8 +153,11 @@ export class PdfGeneratorService {
           .moveDown(0.5)
           .font('Regular')
           .fontSize(12);
-        riskData.risk_factors.forEach((f, i) => {
+
+        for (let i = 0; i < riskData.risk_factors.length; i++) {
+          const f = riskData.risk_factors[i];
           const weightPct = (f.weight * 100).toFixed(1) + '%';
+
           doc
             .fillColor('#34495E')
             .text(`${i + 1}. ${f.label}`, { continued: true })
@@ -161,17 +166,19 @@ export class PdfGeneratorService {
             .fillColor(this.getRiskColor(riskData.risk_score))
             .text(` — ${weightPct}`)
             .moveDown(0.3);
+
           doc
             .fillColor('#2C3E50')
             .fontSize(10)
             .text(`   Описание влияния: ${f.impact_description}`)
             .moveDown(0.7);
-          doc.fontSize(12);
-        });
-        doc.moveDown(1);
-        // ── END RISK FACTORS ───────────────────────────────────────────────
 
-        // ── SUMMARY ────────────────────────────────────────────────────────
+          doc.fontSize(12);
+        }
+
+        doc.moveDown(1);
+
+        // ── SUMMARY ─
         doc
           .font('Bold')
           .fontSize(14)
@@ -183,9 +190,8 @@ export class PdfGeneratorService {
           .fillColor('#2C3E50')
           .text(riskData.summary, { align: 'justify' })
           .moveDown(1.5);
-        // ── END SUMMARY ───────────────────────────────────────────────────
 
-        // ── RECOMMENDATIONS ───────────────────────────────────────────────
+        // ── RECOMMENDATIONS ─
         doc
           .font('Bold')
           .fontSize(14)
@@ -194,18 +200,19 @@ export class PdfGeneratorService {
           .moveDown(0.5)
           .font('Regular')
           .fontSize(12);
-        riskData.recommendations.forEach((rec) => {
+
+        for (const rec of riskData.recommendations) {
           doc
             .circle(doc.x - 6, doc.y + 6, 3)
             .fill(this.getRiskColor(riskData.risk_score))
             .fillColor('#2C3E50')
             .text(`  ${rec}`)
             .moveDown(0.5);
-        });
-        doc.moveDown(1);
-        // ── END RECOMMENDATIONS ──────────────────────────────────────────
+        }
 
-        // ── FOLLOW-UP TESTS ───────────────────────────────────────────────
+        doc.moveDown(1);
+
+        // ── FOLLOW-UP TESTS ─
         doc
           .font('Bold')
           .fontSize(14)
@@ -214,13 +221,14 @@ export class PdfGeneratorService {
           .moveDown(0.5)
           .font('Regular')
           .fontSize(12);
-        riskData.follow_up_tests.forEach((test) => {
-          doc.text(`• ${test}`).moveDown(0.3);
-        });
-        doc.moveDown(1.5);
-        // ── END FOLLOW-UP TESTS ──────────────────────────────────────────
 
-        // ── FOOTER ────────────────────────────────────────────────────────
+        for (const test of riskData.follow_up_tests) {
+          doc.text(`• ${test}`).moveDown(0.3);
+        }
+
+        doc.moveDown(1.5);
+
+        // ── FOOTER ─
         const bottom = doc.page.height - 40;
         doc
           .fontSize(10)
@@ -237,7 +245,6 @@ export class PdfGeneratorService {
             align: 'right',
             width: doc.page.width - 144,
           });
-        // ── END FOOTER ────────────────────────────────────────────────────
 
         doc.end();
         stream.once('finish', () => resolve(filepath));
