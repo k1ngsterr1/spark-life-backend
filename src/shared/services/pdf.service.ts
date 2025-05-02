@@ -1,14 +1,14 @@
-import PDFDocument from 'pdfkit';
+const PDFDocument = require('pdfkit');
 import * as fs from 'fs';
 import * as path from 'path';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class PdfGeneratorService {
-  private readonly outputDir: string;
+  private readonly outputDir = path.join(process.cwd(), 'uploads');
+  private readonly fontPath = path.join(process.cwd(), 'fonts', 'Roboto.ttf');
 
   constructor() {
-    this.outputDir = path.join(process.cwd(), 'uploads');
     this.ensureOutputDirectoryExists();
   }
 
@@ -38,6 +38,11 @@ export class PdfGeneratorService {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument();
+        if (!fs.existsSync(this.fontPath)) {
+          throw new Error(`Font not found at ${this.fontPath}`);
+        }
+        doc.registerFont('DejaVu', this.fontPath);
+        doc.font('DejaVu');
         const fileName = `medical_report_${userId}_${Date.now()}.pdf`;
         const filePath = path.join(this.outputDir, fileName);
         const stream = fs.createWriteStream(filePath);
@@ -72,7 +77,7 @@ export class PdfGeneratorService {
     });
   }
 
-  private addHeader(doc: PDFDocument): void {
+  private addHeader(doc: any): void {
     doc
       .fontSize(20)
       .text('Медицинский отчет о рисках', { align: 'center' })
@@ -83,7 +88,7 @@ export class PdfGeneratorService {
   }
 
   private addPatientInfo(
-    doc: PDFDocument,
+    doc: any,
     userId: number,
     userData: {
       age?: number;
@@ -107,7 +112,7 @@ export class PdfGeneratorService {
       .moveDown(2);
   }
 
-  private addRiskAssessment(doc: PDFDocument, riskScore: number): void {
+  private addRiskAssessment(doc: any, riskScore: number): void {
     doc
       .fontSize(16)
       .text('2. Оценка рисков:', { underline: true })
@@ -125,7 +130,7 @@ export class PdfGeneratorService {
   }
 
   private addRiskFactors(
-    doc: PDFDocument,
+    doc: any,
     riskFactors: Array<{
       source: string;
       label: string;
@@ -151,7 +156,7 @@ export class PdfGeneratorService {
     doc.moveDown(2);
   }
 
-  private addRecommendations(doc: PDFDocument, riskScore: number): void {
+  private addRecommendations(doc: any, riskScore: number): void {
     doc
       .fontSize(16)
       .text('4. Рекомендации:', { underline: true })
@@ -161,7 +166,7 @@ export class PdfGeneratorService {
       .moveDown(2);
   }
 
-  private addFooter(doc: PDFDocument): void {
+  private addFooter(doc: any): void {
     doc
       .fontSize(10)
       .text('________________________________________', { align: 'center' })
