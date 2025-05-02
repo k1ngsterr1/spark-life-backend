@@ -4,6 +4,7 @@ import {
   Param,
   UseGuards,
   ParseIntPipe,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -23,12 +24,8 @@ export class RiskController {
   constructor(private readonly riskService: RiskService) {}
 
   @Post('calculate/:userId')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Calculate and update the risk profile for a user' })
-  @ApiParam({
-    name: 'userId',
-    type: Number,
-    description: 'The ID of the user to calculate the risk profile for',
-  })
   @ApiResponse({
     status: 200,
     description:
@@ -38,9 +35,7 @@ export class RiskController {
     status: 404,
     description: 'User not found.',
   })
-  async calculateRisk(
-    @Param('userId', ParseIntPipe) userId: number,
-  ): Promise<any> {
-    return this.riskService.calculateRiskProfile(userId);
+  async calculateRisk(@Request() req): Promise<any> {
+    return this.riskService.calculateRiskProfile(req.user.id);
   }
 }
