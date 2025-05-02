@@ -27,6 +27,8 @@ enum NotificationType {
   other
 }
 
+
+
 enum RecurrencePattern {
   daily
   weekdays
@@ -59,8 +61,18 @@ model User {
   appointments    Appointment[]   @relation("UserAppointments")
   dentalChecks    DentalCheck[]   @relation("UserDentalChecks")
 
-  // ✅ Новое поле для связи с анализами
+  riskProfile    RiskProfile?     @relation("UserRiskProfile")
   medicalAnalyses MedicalAnalysis[] @relation("UserMedicalAnalyses")
+}
+
+model RiskProfile {
+  id           Int      @id @default(autoincrement())
+  user_id      Int      @unique
+  risk_score   Float
+  risk_factors Json
+  updated_at   DateTime @updatedAt
+
+  user         User     @relation("UserRiskProfile", fields: [user_id], references: [id])
 }
 
 

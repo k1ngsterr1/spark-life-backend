@@ -18,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 import { Express } from 'express';
 import { AuthGuard } from '@nestjs/passport';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @ApiTags('Skiniver')
 @Controller('skiniver')
@@ -45,27 +47,77 @@ export class SkiniverController {
   @ApiResponse({
     status: 200,
     description: 'Prediction result from Skiniver AI',
-    content: {
-      'application/json': {
-        example: {
-          status: 'ok',
-          result: {
-            acne: 0.2,
-            wrinkles: 0.5,
-            pigmentation: 0.1,
-          },
+  })
+  async predict(@UploadedFile() file: Express.Multer.File, @Request() req) {
+    if (!file) throw new Error('Файл не загружен');
+
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.writeFileSync(filePath, file.buffer);
+
+    const result = await this.skiniverService.predict(file);
+    const gradcamPath = await this.skiniverService.generateGradcam(filePath);
+
+    await this.skiniverService.saveSkinCheck(req.user.id, result);
+
+    return {
+      status: 'ok',
+      result,
+      gradcam: gradcamPath
+        ? `https://spark-life-backend-production.up.railway.app/uploads/${path.basename(gradcamPath)}`
+        : null,
+    };
+  }
+
+  // 🆕 GRADCAM-ONLY ENDPOINT
+  @Post('gradcam')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('img'))
+  @ApiOperation({
+    summary: 'Generate a simulated Grad-CAM from uploaded image',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Image file to create Grad-CAM visualization',
+    schema: {
+      type: 'object',
+      properties: {
+        img: {
+          type: 'string',
+          format: 'binary',
         },
       },
     },
   })
-  async predict(@UploadedFile() file: Express.Multer.File, @Request() req) {
-    if (!file) {
-      throw new Error('Файл не загружен');
-    }
-    const result = await this.skiniverService.predict(file);
+  @ApiResponse({
+    status: 200,
+    description: 'Simulated Grad-CAM overlay result',
+    content: {
+      'application/json': {
+        example: {
+          status: 'ok',
+          gradcam:
+            'https://yourdomain.com/uploads/upload_123456789_gradcam.jpg',
+        },
+      },
+    },
+  })
+  async generateGradcam(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new Error('Файл не загружен');
 
-    await this.skiniverService.saveSkinCheck(req.user.id, result);
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.writeFileSync(filePath, file.buffer);
 
-    return { status: 'ok', result };
+    const gradcamPath = await this.skiniverService.generateGradcam(filePath);
+
+    return {
+      status: 'ok',
+      gradcam: gradcamPath
+        ? `https://yourdomain.com/uploads/${path.basename(gradcamPath)}`
+        : null,
+    };
   }
 }

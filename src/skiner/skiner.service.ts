@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import * as FormData from 'form-data';
+import * as path from 'path';
+import * as fs from 'fs';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { PrismaService } from 'src/shared/services/prisma.service';
+
+const execFileAsync = promisify(execFile);
 
 @Injectable()
 export class SkiniverService {
@@ -9,7 +15,7 @@ export class SkiniverService {
   private readonly authHeader =
     'Basic ZmVlZGJhY2tAeWFya29sYXNlci5ydTp3N0UweFVIb1l6bmc=';
 
-  constructor(private readonly prisma: PrismaService) {} // ⬅️ внедряем Prisma
+  constructor(private readonly prisma: PrismaService) {}
 
   async predict(file: Express.Multer.File): Promise<any> {
     try {
@@ -63,5 +69,29 @@ export class SkiniverService {
         atlas_page_link: skiniveResult.atlas_page_link,
       },
     });
+  }
+
+  async generateGradcam(imagePath: string): Promise<string | null> {
+    const scriptPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'scripts',
+      'fakeGradcam.js',
+    );
+
+    try {
+      const { stdout } = await execFileAsync('node', [scriptPath, imagePath]);
+      const gradcamPath = stdout.trim();
+
+      if (!fs.existsSync(gradcamPath)) {
+        throw new Error('Grad-CAM image not found');
+      }
+
+      return gradcamPath;
+    } catch (error) {
+      console.error('[GradCAM Generation Error]', error.message);
+      return null;
+    }
   }
 }
