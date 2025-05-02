@@ -1,17 +1,8 @@
-import {
-  Controller,
-  Post,
-  Param,
-  UseGuards,
-  ParseIntPipe,
-  Request,
-  Get,
-} from '@nestjs/common';
+import { Controller, Post, UseGuards, Request, Get } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
   ApiOperation,
-  ApiParam,
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
@@ -38,6 +29,38 @@ export class RiskController {
   })
   async calculateRisk(@Request() req): Promise<any> {
     return this.riskService.calculateRiskProfile(req.user.id);
+  }
+
+  @Get('reports')
+  @ApiOperation({
+    summary: 'Get all risk report PDF URLs for the authenticated user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a JSON array with the public URLs of all PDFs.',
+    schema: {
+      example: {
+        urls: [
+          'https://.../uploads/medical_report_42_1683038400001.pdf',
+          'https://.../uploads/medical_report_42_1683038300456.pdf',
+          // etc.
+        ],
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No reports found.',
+  })
+  async listRiskReports(@Request() req): Promise<{ urls: string[] }> {
+    const userId = req.user.id;
+    const filenames = await this.riskService.listRiskReports(userId);
+
+    // build full URLs
+    const base = `${req.protocol}://${req.get('host')}/uploads`;
+    const urls = filenames.map((fn) => `${base}/${fn}`);
+
+    return { urls };
   }
 
   @Get('report')

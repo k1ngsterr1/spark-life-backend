@@ -3,9 +3,13 @@ import { Prisma } from '@prisma/client';
 import { AIService } from 'src/shared/services/ai.service';
 import { PdfGeneratorService } from 'src/shared/services/pdf.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class RiskService {
+  private readonly uploadsDir = path.join(process.cwd(), 'uploads');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiService: AIService,
@@ -92,6 +96,30 @@ export class RiskService {
       riskData,
       pdfPath,
     };
+  }
+
+  async listRiskReports(userId: number): Promise<string[]> {
+    // ensure directory exists
+    if (!fs.existsSync(this.uploadsDir)) {
+      throw new Error('No reports directory found');
+    }
+
+    const files = await fs.promises.readdir(this.uploadsDir);
+    const re = new RegExp(`^medical_report_${userId}_[0-9]+\\.pdf$`);
+
+    // filter + sort by timestamp embedded in the name
+    const matched = files
+      .filter((f) => re.test(f))
+      .sort((a, b) => {
+        const ta = parseInt(a.match(/_(\d+)\.pdf$/)![1], 10);
+        const tb = parseInt(b.match(/_(\d+)\.pdf$/)![1], 10);
+        return tb - ta; // newest first
+      });
+
+    if (matched.length === 0) {
+      throw new Error('No risk reports found for this user');
+    }
+    return matched;
   }
 
   async getRiskReport(userId: number): Promise<{ filename: string }> {
