@@ -63,7 +63,13 @@ export class RiskService {
       userDataForPdf,
       {
         risk_score: riskData.risk_score,
+        risk_level: riskData.risk_level,
+        risk_category: riskData.risk_category,
         risk_factors: riskData.risk_factors,
+        summary: riskData.summary,
+        recommendations: riskData.recommendations,
+        follow_up_tests: riskData.follow_up_tests,
+        generated_at: new Date().toISOString(),
       },
     );
 
