@@ -5,6 +5,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  Get,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -60,7 +61,13 @@ export class AnalysisController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ): Promise<any> {
-    // например, сохранить изображение в S3 или отдать в AIService напрямую
     return this.analysisService.diagnoseFromImage(req.user.id, file);
+  }
+
+  @Get('history')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'История медицинских анализов пользователя' })
+  async getHistory(@Request() req) {
+    return this.analysisService.getHistory(req.user.id);
   }
 }
