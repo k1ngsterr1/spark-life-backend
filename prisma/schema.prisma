@@ -120,7 +120,6 @@ model DetailedSkinCheck {
   prob                 String
   uid                  String   @unique
   atlas_page_link      String
-  details              Json
   created_at           DateTime @default(now())
 
   user                 User                 @relation(fields: [user_id], references: [id])

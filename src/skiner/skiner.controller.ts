@@ -71,6 +71,48 @@ export class SkiniverController {
     };
   }
 
+  @Post('predict-detailed')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('img'))
+  @ApiOperation({
+    summary: 'Predict detailed skin condition by uploaded image',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Image file for detailed skin analysis',
+    schema: {
+      type: 'object',
+      properties: {
+        img: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Prediction result from Detailed Skiniver AI',
+  })
+  async predictDetailed(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    if (!file) throw new Error('Файл не загружен');
+
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.writeFileSync(filePath, file.buffer);
+    const result = await this.skiniverService.predict(file);
+    await this.skiniverService.saveDetailedSkinCheck(req.user.id, result);
+
+    return {
+      status: 'ok',
+      result,
+    };
+  }
+
   @Get('history')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get user skin check history' })
