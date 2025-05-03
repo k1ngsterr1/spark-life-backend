@@ -73,6 +73,13 @@ model RiskProfile {
   user         User     @relation("UserRiskProfile", fields: [user_id], references: [id])
 }
 
+model Transcript {
+  id           Int  @id @default(autoincrement())
+  patient_id   Int
+  doctor_id    Int
+  file_path    String
+}
+
 
 model MedicalAnalysis {
   id         Int      @id @default(autoincrement())

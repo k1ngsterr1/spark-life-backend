@@ -16,6 +16,7 @@ import { DentalCheckModule } from './dental-check/dental-check.module';
 import { TwogisClinicsModule } from './2gis-clinics/2gis-clinics.module';
 import { AnalysisModule } from './analysis/analysis.module';
 import { RiskModule } from './risk/risk.module';
+import { TranscriptModule } from './transcript/transcript.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -38,6 +39,7 @@ import { RiskModule } from './risk/risk.module';
     TwogisClinicsModule,
     AnalysisModule,
     RiskModule,
+    TranscriptModule,
   ],
 })
 export class AppModule {}

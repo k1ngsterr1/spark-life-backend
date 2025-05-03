@@ -23,6 +23,11 @@ interface ExtendedRiskProfileData {
   follow_up_tests: string[];
   generated_at: string;
 }
+interface ShortSummartyOfAudioData {
+  summary: string;
+  recommendations: string[];
+  generated_at: string;
+}
 
 @Injectable()
 export class AIService {
@@ -686,5 +691,58 @@ ${JSON.stringify(result.predictions, null, 2)}
       `✅ Extended risk profile for user ${userId} generated_at ${parsed.generated_at}`,
     );
     return parsed;
+  }
+  async generateShortTextRecommendation(
+    text: string,
+  ): Promise<ShortSummartyOfAudioData> {
+    const prompt = `
+Ты — опытный врач-аналитик. На основе следующем разговором с пациентом: ${text}
+
+Верни строго по JSON схеме (никаких пояснений, только JSON):
+
+{     
+  "summary": string,     
+  "recommendations": [string],
+  "generated_at": string       // текущий ISO timestamp
+}
+`.trim();
+
+    // 4) Call the Chat API
+    const response = await this.client.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'Ты медицинский ассистент. Отвечай строго JSON.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.2,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error('Empty AI response');
+
+    let parsed: ShortSummartyOfAudioData;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      throw new Error(
+        `Failed to parse JSON: ${e.message}\n\nResponse:\n${content}`,
+      );
+    }
+    return parsed;
+  }
+
+  async getTranscript(filePath: string): Promise<string> {
+    const transcription = await this.client.audio.transcriptions.create({
+      model: 'whisper-1',
+      file: fs.createReadStream(filePath) as any,
+    });
+
+    const text = transcription.text?.trim();
+    console.log(text);
+    if (!text) throw new HttpException('Не удалось расшифровать аудио', 500);
+    return text;
   }
 }

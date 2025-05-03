@@ -18,6 +18,11 @@ export interface ExtendedRiskProfileData {
   follow_up_tests: string[];
   generated_at: string;
 }
+interface ShortSummaryOfAudioData {
+  summary: string;
+  recommendations: string[];
+  generated_at: string;
+}
 
 @Injectable()
 export class PdfGeneratorService {
@@ -276,5 +281,126 @@ export class PdfGeneratorService {
       PersonalData: 'Анкета',
     };
     return map[source] || source;
+  }
+  async generateShortSummary(
+    userData: {
+      full_name?: string;
+      birthDate?: string;
+      gender?: string;
+      height?: number;
+      weight?: number;
+      diseases?: string[];
+    },
+    data: ShortSummaryOfAudioData,
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      try {
+        const ACCENT = '#2297E4';
+        const LOGO_W = 42;
+        const LOGO_PAD_R = 6;
+        const LOGO_PAD_TOP = 20;
+
+        const doc = new PDFDocument({
+          size: 'A4',
+          margins: { top: 36, left: 36, right: 36, bottom: 36 },
+        });
+        const filePath = path.join(
+          this.outputDir,
+          `audio_summary_${Date.now()}.pdf`,
+        );
+        const stream = fs.createWriteStream(filePath);
+        doc.pipe(stream);
+
+        // fonts
+        doc.registerFont('Regular', this.fontRegular);
+        doc.registerFont('Bold', this.fontBold);
+
+        const pageWidth =
+          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        const drawLine = (y: number) =>
+          doc
+            .moveTo(doc.page.margins.left, y)
+            .lineTo(doc.page.margins.left + pageWidth, y)
+            .stroke(ACCENT);
+
+        /* HEADER */
+        const titleStartY = doc.y;
+        const titleBoxW = pageWidth - LOGO_W - LOGO_PAD_R;
+        doc
+          .font('Bold')
+          .fontSize(16)
+          .text('Краткий аудио‑отчёт / Қысқаша дыбыстық есеп', {
+            width: titleBoxW,
+          });
+        if (fs.existsSync(this.logo)) {
+          doc.image(
+            this.logo,
+            doc.page.width - doc.page.margins.right - LOGO_W - LOGO_PAD_R,
+            titleStartY - LOGO_PAD_TOP,
+            { width: LOGO_W },
+          );
+        }
+        drawLine(doc.y + 6);
+        doc.moveDown(1);
+
+        /* PATIENT INFO */
+        const translateGender = (g?: string) => {
+          const v = (g || '').toLowerCase();
+          if (['мужской', 'male', 'm'].includes(v)) return 'Мужской / Ер';
+          if (['женский', 'female', 'f'].includes(v)) return 'Женский / Әйел';
+          return g ?? '—';
+        };
+        const pairs: Array<[string, string]> = [
+          ['Пациент / Науқас', userData.full_name ?? '—'],
+          ['Пол / Жынысы', translateGender(userData.gender)],
+          [
+            'Дата отчёта / Есеп күні',
+            new Date(data.generated_at).toLocaleString('ru-RU'),
+          ],
+        ];
+        pairs.forEach(([l, v]) => {
+          doc
+            .font('Regular')
+            .fontSize(10)
+            .fillColor('#424242')
+            .text(`${l}: `, { continued: true });
+          doc.font('Bold').fillColor('#000').text(v);
+          doc.moveDown(0.2);
+        });
+        doc.moveDown(0.6);
+
+        /* SUMMARY SECTION */
+        const writeSection = (title: string, body: string | string[]) => {
+          doc.font('Bold').fontSize(11).text(title, { underline: true });
+          doc.moveDown(0.4);
+          if (Array.isArray(body)) {
+            body.forEach((b) => {
+              doc.circle(doc.x - 4, doc.y + 4.5, 2).fill(ACCENT);
+              doc
+                .font('Regular')
+                .fontSize(10)
+                .fillColor('#000')
+                .text('  ' + b);
+            });
+          } else {
+            doc.font('Regular').fontSize(10).text(body, { align: 'justify' });
+          }
+          doc.moveDown(0.8);
+        };
+
+        writeSection('Резюме / Қорытынды', data.summary);
+        writeSection('Рекомендации / Ұсынымдар', data.recommendations);
+
+        /* FOOTER */
+        const footerY = doc.page.height - doc.page.margins.bottom + 14;
+        drawLine(footerY - 10);
+
+        doc.end();
+        stream.on('finish', () => resolve(filePath));
+        stream.on('error', reject);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 }
