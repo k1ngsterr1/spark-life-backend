@@ -589,7 +589,7 @@ ${JSON.stringify(result.predictions, null, 2)}
 
       console.log(
         '[diagnoseFromAnalysisImage] Данные успешно сохранены с ID:',
-        saved.id,
+        saved,
       );
 
       return saved;
