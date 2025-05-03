@@ -35,32 +35,37 @@ enum RecurrencePattern {
 }
 
 model User {
-  id              Int             @id @default(autoincrement())
-  email           String          @unique
-  phone           String          @unique
-  first_name      String
-  last_name       String
-  patronymic      String
-  password        String
-  diseases        String[]
-  med_doc         String
-  role            Role            @default(User)
-  weekly_water    Json?           @default("{}")
-  weekly_sleep    Json?           @default("{}")
-  gender          Gender?         @default(Undefined)
-  age             Int?
-  height          Decimal?
-  weight          Decimal?
+  id                  Int                   @id @default(autoincrement())
+  email               String                @unique
+  phone               String                @unique
+  first_name          String
+  last_name           String
+  patronymic          String
+  password            String
+  diseases            String[]
+  med_doc             String
+  role                Role                  @default(User)
+  weekly_water        Json?                 @default("{}")
+  weekly_sleep        Json?                 @default("{}")
+  gender              Gender?               @default(Undefined)
+  age                 Int?
+  height              Decimal?
+  weight              Decimal?
 
-  clinic          Clinic?         @relation("MyClinic")
-  notifications   Notification[]
-  skinChecks      SkinCheck[]
-  anxietyChecks   AnxietyCheck[]  @relation("UserAnxietyChecks")
-  appointments    Appointment[]   @relation("UserAppointments")
-  dentalChecks    DentalCheck[]   @relation("UserDentalChecks")
+  clinic              Clinic?               @relation("MyClinic")
+  notifications       Notification[]
+  skinChecks          SkinCheck[]
+  detailedSkinChecks  DetailedSkinCheck[]
+  userDetailedSkinChecks UserDetailedSkinCheck[]
+
+  anxietyChecks       AnxietyCheck[]        @relation("UserAnxietyChecks")
+  appointments        Appointment[]         @relation("UserAppointments")
+  dentalChecks        DentalCheck[]         @relation("UserDentalChecks")
 
   riskProfile    RiskProfile?     @relation("UserRiskProfile")
   medicalAnalyses MedicalAnalysis[] @relation("UserMedicalAnalyses")
+  riskProfile         RiskProfile?          @relation("UserRiskProfile")
+  medicalAnalyses     MedicalAnalysis[]     @relation("UserMedicalAnalyses")
 }
 
 model RiskProfile {
@@ -93,6 +98,32 @@ model MedicalAnalysis {
   @@index([user_id])
 }
 
+model DetailedSkinCheck {
+  id                   Int      @id @default(autoincrement())
+  user_id              Int
+  check_datetime       DateTime
+  class                String
+  class_raw            String
+  disease              String
+  description          String
+  risk                 String
+  risk_level           String
+  risk_description     String
+  risk_title           String
+  short_recommendation String
+  image_url            String
+  masked_s3_url        String
+  colored_s3_url       String
+  prob                 String
+  uid                  String   @unique
+  atlas_page_link      String
+  created_at           DateTime @default(now())
+
+  user                 User                 @relation(fields: [user_id], references: [id])
+  userDetailedSkinChecks UserDetailedSkinCheck[]
+
+  @@index([user_id])
+}
 
 model DentalCheck {
   id          Int      @id @default(autoincrement())
@@ -106,7 +137,6 @@ model DentalCheck {
 
   @@index([user_id])
 }
-
 
 model SkinCheck {
   id                   Int      @id @default(autoincrement())
@@ -131,9 +161,6 @@ model SkinCheck {
 
   user                 User     @relation(fields: [user_id], references: [id])
 }
-
-
-
 
 model Clinic {
   id            String     @id @default(uuid())
@@ -178,7 +205,6 @@ model Doctor {
   services          Service[]  @relation("DoctorServices")
   appointments      Appointment[] @relation("DoctorAppointments")
 }
-
 
 model Notification {
   id                 Int               @id @default(autoincrement())

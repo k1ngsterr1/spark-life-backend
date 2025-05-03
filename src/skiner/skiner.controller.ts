@@ -71,6 +71,96 @@ export class SkiniverController {
     };
   }
 
+<<<<<<< HEAD
+  @Get('history')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get user skin check history' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of previous skin checks',
+  })
+  async getHistory(@Request() req) {
+    const history = await this.skiniverService.getSkinCheckHistory(req.user.id);
+    return {
+      status: 'ok',
+      history,
+    };
+  }
+
+  @Post('gradcam')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('img'))
+  @ApiOperation({
+    summary: 'Generate a simulated Grad-CAM from uploaded image',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Image file to create Grad-CAM visualization',
+=======
+  @Post('predict-detailed')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('img'))
+  @ApiOperation({
+    summary: 'Predict detailed skin condition by uploaded image',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Image file for detailed skin analysis',
+>>>>>>> 74f573f60837932b33724da410bc634a6f05a338
+    schema: {
+      type: 'object',
+      properties: {
+        img: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+<<<<<<< HEAD
+    description: 'Simulated Grad-CAM overlay result',
+    content: {
+      'application/json': {
+        example: {
+          status: 'ok',
+          gradcam:
+            'https://yourdomain.com/uploads/upload_123456789_gradcam.jpg',
+        },
+      },
+    },
+  })
+  async generateGradcam(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new Error('Файл не загружен');
+
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.writeFileSync(filePath, file.buffer);
+
+=======
+    description: 'Prediction result from Detailed Skiniver AI',
+  })
+  async predictDetailed(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    if (!file) throw new Error('Файл не загружен');
+
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.writeFileSync(filePath, file.buffer);
+    const result = await this.skiniverService.predict(file);
+    await this.skiniverService.saveDetailedSkinCheck(req.user.id, result);
+
+    return {
+      status: 'ok',
+      result,
+    };
+  }
+
   @Get('history')
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get user skin check history' })
@@ -126,6 +216,7 @@ export class SkiniverController {
     fs.mkdirSync(uploadDir, { recursive: true });
     fs.writeFileSync(filePath, file.buffer);
 
+>>>>>>> 74f573f60837932b33724da410bc634a6f05a338
     const gradcamPath = await this.skiniverService.generateGradcam(filePath);
 
     return {

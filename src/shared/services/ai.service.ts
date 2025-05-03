@@ -7,6 +7,23 @@ import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as textToSpeech from '@google-cloud/text-to-speech';
+import * as tmp from 'tmp';
+
+interface ExtendedRiskProfileData {
+  risk_score: number;
+  risk_level: 'Низкий' | 'Средний' | 'Высокий';
+  risk_category: string;
+  risk_factors: Array<{
+    source: string;
+    label: string;
+    weight: number;
+    impact_description: string;
+  }>;
+  summary: string;
+  recommendations: string[];
+  follow_up_tests: string[];
+  generated_at: string;
+}
 
 interface ExtendedRiskProfileData {
   risk_score: number;
@@ -233,22 +250,37 @@ User question:
   }
 
   private async synthesizeSpeech(text: string): Promise<string> {
+    // 1. Получаем JSON-строку из переменной окружения
+    const keyJson = JSON.parse(process.env.KEY!);
+    keyJson.private_key = keyJson.private_key.replace(/\\n/g, '\n'); // обязательно!
+
+    // 2. Создаём временный файл и записываем ключ туда
+    const tmpKeyFile = tmp.fileSync({ postfix: '.json' });
+    fs.writeFileSync(tmpKeyFile.name, JSON.stringify(keyJson));
+
+    // 3. Инициализируем Google TTS клиент с временным файлом
     const client = new textToSpeech.TextToSpeechClient({
+<<<<<<< HEAD
       keyFilename: path.join(process.cwd(), 'keys/tts-key.json'),
+=======
+      keyFilename: tmpKeyFile.name,
+>>>>>>> 74f573f60837932b33724da410bc634a6f05a338
     });
 
+    // 4. Формируем запрос
     const request: textToSpeech.protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
       {
         input: { text },
         voice: {
           languageCode: 'ru-RU',
-          name: 'ru-RU-Chirp3-HD-Charon',
+          name: 'ru-RU-Chirp3-HD-Charon', // если будет ошибка, замени на ru-RU-Wavenet-B
         },
         audioConfig: {
           audioEncoding: 'LINEAR16',
         },
       };
 
+    // 5. Отправляем запрос
     const [response] = await client.synthesizeSpeech(request);
 
     if (!response.audioContent) {
@@ -692,6 +724,7 @@ ${JSON.stringify(result.predictions, null, 2)}
     );
     return parsed;
   }
+<<<<<<< HEAD
   async generateShortTextRecommendation(
     text: string,
   ): Promise<ShortSummartyOfAudioData> {
@@ -745,4 +778,6 @@ ${JSON.stringify(result.predictions, null, 2)}
     if (!text) throw new HttpException('Не удалось расшифровать аудио', 500);
     return text;
   }
+=======
+>>>>>>> 74f573f60837932b33724da410bc634a6f05a338
 }

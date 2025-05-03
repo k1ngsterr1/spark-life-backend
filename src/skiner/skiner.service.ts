@@ -71,6 +71,35 @@ export class SkiniverService {
     });
   }
 
+<<<<<<< HEAD
+=======
+  async saveDetailedSkinCheck(userId: number, skiniveResult: any) {
+    return this.prisma.detailedSkinCheck.create({
+      data: {
+        user: {
+          connect: { id: userId },
+        },
+        check_datetime: new Date(skiniveResult.check_datetime),
+        class: skiniveResult.class,
+        class_raw: skiniveResult.class_raw,
+        disease: skiniveResult.desease,
+        description: skiniveResult.description,
+        risk: skiniveResult.risk,
+        risk_level: skiniveResult.risk_level,
+        risk_description: skiniveResult.risk_description,
+        risk_title: skiniveResult.risk_title,
+        short_recommendation: skiniveResult.short_recommendation,
+        image_url: skiniveResult.image_url,
+        masked_s3_url: skiniveResult.masked_s3_url,
+        colored_s3_url: skiniveResult.colored_s3_url,
+        prob: skiniveResult.prob,
+        uid: skiniveResult.uid,
+        atlas_page_link: skiniveResult.atlas_page_link,
+      },
+    });
+  }
+
+>>>>>>> 74f573f60837932b33724da410bc634a6f05a338
   async getSkinCheckHistory(userId: number) {
     return this.prisma.skinCheck.findMany({
       where: { user_id: userId },
