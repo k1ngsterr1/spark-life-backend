@@ -559,6 +559,8 @@ ${JSON.stringify(result.predictions, null, 2)}
           .trim();
       }
 
+      console.log(cleanedText);
+
       const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error(
@@ -589,7 +591,7 @@ ${JSON.stringify(result.predictions, null, 2)}
 
       console.log(
         '[diagnoseFromAnalysisImage] Данные успешно сохранены с ID:',
-        saved.id,
+        saved,
       );
 
       return saved;
@@ -666,7 +668,6 @@ ${JSON.stringify(result.predictions, null, 2)}
       );
     }
 
-    // 5) (Optionally) persist only the fields you care about, e.g. risk_score + risk_factors
     await this.prisma.riskProfile.upsert({
       where: { user_id: userId },
       update: {

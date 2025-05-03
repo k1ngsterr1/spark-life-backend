@@ -92,6 +92,7 @@ model DentalCheck {
   user_id     Int
   result      Json
   image_url   String
+  explanation Json?   
   created_at  DateTime @default(now())
 
   user        User     @relation("UserDentalChecks", fields: [user_id], references: [id])

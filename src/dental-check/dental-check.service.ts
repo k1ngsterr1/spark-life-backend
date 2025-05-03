@@ -37,12 +37,7 @@ export class DentalCheckService {
       const buffer = Buffer.from(base64Data, 'base64');
       await writeFile(filePath, buffer);
 
-      const gradcamPath = await this.generateGradcam(filePath);
-      const gradcamUrl = gradcamPath
-        ? `https://spark-life-backend-production-d81a.up.railway.app//uploads/${path.basename(gradcamPath)}`
-        : null;
-
-      const publicUrl = `https://spark-life-backend-production-d81a.up.railway.app//uploads/${fileName}`;
+      const publicUrl = `https://spark-life-backend-production-d81a.up.railway.app/uploads/${fileName}`;
 
       const { data } = await axios.post(this.roboflowUrl, null, {
         params: {
@@ -51,24 +46,25 @@ export class DentalCheckService {
         },
       });
 
-      const result = await this.prisma.dentalCheck.create({
-        data: {
-          user_id: userId,
-          result: data,
-          image_url: `/uploads/${fileName}`,
-        },
-      });
-
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
       const explanation = await this.aiService.explainDentalCheckResultRu(
         user,
         data,
       );
 
+      const result = await this.prisma.dentalCheck.create({
+        data: {
+          user_id: userId,
+          result: data,
+          image_url: `${process.env.BASE_URL}/uploads/${fileName}`,
+          explanation,
+        },
+      });
+
       return {
         ...result,
         explanation,
-        gradcam: gradcamUrl,
       };
     } catch (error) {
       console.error('Roboflow error:', error.response?.data || error.message);

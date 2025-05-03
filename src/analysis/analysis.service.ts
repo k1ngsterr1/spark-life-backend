@@ -30,15 +30,7 @@ export class AnalysisService {
       imageUrl,
     );
 
-    const saved = await this.prisma.medicalAnalysis.create({
-      data: {
-        user_id: userId,
-        image_url: imageUrl,
-        result,
-      },
-    });
-
-    return saved;
+    return result;
   }
 
   async getHistory(userId: number) {
