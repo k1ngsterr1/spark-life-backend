@@ -40,4 +40,11 @@ export class AnalysisService {
 
     return saved;
   }
+
+  async getHistory(userId: number) {
+    return this.prisma.medicalAnalysis.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
+  }
 }
