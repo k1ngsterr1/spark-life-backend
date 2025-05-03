@@ -37,11 +37,6 @@ export class DentalCheckService {
       const buffer = Buffer.from(base64Data, 'base64');
       await writeFile(filePath, buffer);
 
-      const gradcamPath = await this.generateGradcam(filePath);
-      const gradcamUrl = gradcamPath
-        ? `https://spark-life-backend-production-d81a.up.railway.app//uploads/${path.basename(gradcamPath)}`
-        : null;
-
       const publicUrl = `https://spark-life-backend-production-d81a.up.railway.app/uploads/${fileName}`;
 
       const { data } = await axios.post(this.roboflowUrl, null, {
@@ -70,7 +65,6 @@ export class DentalCheckService {
       return {
         ...result,
         explanation,
-        gradcam: gradcamUrl,
       };
     } catch (error) {
       console.error('Roboflow error:', error.response?.data || error.message);
