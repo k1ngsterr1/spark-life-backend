@@ -57,6 +57,8 @@ export class RiskService {
 
     const userDataForPdf = {
       age: user.age,
+      gender: user.gender,
+      full_name: `${user.last_name} ${user.first_name} ${user.patronymic}`,
       height: user.height?.toNumber() || null,
       weight: user.weight?.toNumber() || null,
       diseases: user.diseases,
