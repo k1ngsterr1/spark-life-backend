@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require('pdfkit');
 
 export interface ExtendedRiskProfileData {
@@ -10,13 +11,12 @@ export interface ExtendedRiskProfileData {
   risk_factors: Array<{
     source: string;
     label: string;
-    weight: number;
     impact_description: string;
   }>;
   summary: string;
   recommendations: string[];
   follow_up_tests: string[];
-  generated_at: string; // ISO timestamp
+  generated_at: string;
 }
 
 @Injectable()
@@ -32,21 +32,19 @@ export class PdfGeneratorService {
     'fonts',
     'Roboto-Bold.ttf',
   );
+  private readonly logo = path.join(process.cwd(), 'uploads', 'logo.jpg');
 
   constructor() {
-    this.ensureOutputDirectoryExists();
-  }
-
-  private ensureOutputDirectoryExists() {
-    if (!fs.existsSync(this.outputDir)) {
+    if (!fs.existsSync(this.outputDir))
       fs.mkdirSync(this.outputDir, { recursive: true });
-    }
   }
 
   public async generateRiskReport(
     userId: number,
     userData: {
-      age?: number;
+      full_name?: string;
+      birthDate?: string;
+      gender?: string;
       height?: number;
       weight?: number;
       diseases?: string[];
@@ -55,225 +53,227 @@ export class PdfGeneratorService {
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
+        /* ───────────────────────── CONFIG ───────────────────────── */
+        const ACCENT = '#2297E4';
+        const GREY_BG = '#F5F5F5';
+        const LOGO_W = 42; // final logo width
+        const LOGO_PAD_R = 6; // right padding inside header
+        const LOGO_PAD_TOP = 20; // lift logo higher relative to text
+
         const doc = new PDFDocument({
           size: 'A4',
-          margins: { top: 80, bottom: 72, left: 72, right: 72 },
+          margins: { top: 36, left: 36, right: 36, bottom: 36 },
         });
-
-        if (!fs.existsSync(this.fontRegular)) {
-          throw new Error(`Font not found: ${this.fontRegular}`);
-        }
-        doc.registerFont('Regular', this.fontRegular);
-
-        if (!fs.existsSync(this.fontBold)) {
-          throw new Error(`Font not found: ${this.fontBold}`);
-        }
-        doc.registerFont('Bold', this.fontBold);
-
-        doc.font('Regular');
-
-        const filename = `medical_report_${userId}_${Date.now()}.pdf`;
-        const filepath = path.join(this.outputDir, filename);
+        const filepath = path.join(
+          this.outputDir,
+          `medical_report_${userId}_${Date.now()}.pdf`,
+        );
         const stream = fs.createWriteStream(filepath);
         doc.pipe(stream);
 
-        // ── HEADER ─
-        doc.fillColor('#2C3E50').rect(0, 0, doc.page.width, 80).fill();
-        doc
-          .fillColor('#FFFFFF')
-          .font('Bold')
-          .fontSize(20)
-          .text('SPARK HEALTH', 72, 24, { align: 'left' })
-          .text('Медицинский отчёт о рисках', 0, 28, { align: 'center' })
-          .font('Regular')
-          .fontSize(10)
-          .text('Конфиденциальный документ', 0, 50, { align: 'center' });
+        /* fonts */
+        doc.registerFont('Regular', this.fontRegular);
+        doc.registerFont('Bold', this.fontBold);
 
-        doc
-          .moveTo(72, 82)
-          .lineTo(doc.page.width - 72, 82)
-          .strokeColor('#3498DB')
-          .lineWidth(2)
-          .stroke();
-        doc.moveDown(4);
-
-        // ── PATIENT INFO ─
-        doc
-          .fillColor('#2C3E50')
-          .font('Bold')
-          .fontSize(14)
-          .text('1. Данные пациента')
-          .moveDown(0.5)
-          .font('Regular')
-          .fontSize(12);
-
-        const infoLines = [
-          `ID: ${userId}`,
-          `Возраст: ${userData.age ?? 'не указан'}`,
-          `Рост: ${userData.height ?? 'не указан'} см`,
-          `Вес: ${userData.weight ?? 'не указан'} кг`,
-          `Заболевания: ${userData.diseases?.join(', ') ?? 'не указаны'}`,
-        ];
-
-        for (const line of infoLines) {
-          doc.text(`• ${line}`);
-        }
-
-        doc.moveDown(1.5);
-
-        // ── RISK OVERVIEW ─
-        doc
-          .font('Bold')
-          .fontSize(14)
-          .fillColor('#2C3E50')
-          .text('2. Общая оценка риска')
-          .moveDown(0.5);
-
-        const pct = (riskData.risk_score * 100).toFixed(1);
-        doc
-          .font('Bold')
-          .fontSize(20)
-          .fillColor(this.getRiskColor(riskData.risk_score))
-          .text(`${pct}%`, { continued: true })
-          .font('Regular')
-          .fontSize(12)
-          .fillColor('#2C3E50')
-          .text(
-            `  (${riskData.risk_level}, категория: ${riskData.risk_category})`,
-          );
-
-        doc.moveDown(1.5);
-
-        // ── RISK FACTORS ─
-        doc
-          .font('Bold')
-          .fontSize(14)
-          .fillColor('#2C3E50')
-          .text('3. Факторы риска')
-          .moveDown(0.5)
-          .font('Regular')
-          .fontSize(12);
-
-        for (let i = 0; i < riskData.risk_factors.length; i++) {
-          const f = riskData.risk_factors[i];
-          const weightPct = (f.weight * 100).toFixed(1) + '%';
-
+        const pageWidth =
+          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        const drawLine = (y: number) =>
           doc
-            .fillColor('#34495E')
-            .text(`${i + 1}. ${f.label}`, { continued: true })
-            .fillColor('#7F8C8D')
-            .text(` (${f.source})`, { continued: true })
-            .fillColor(this.getRiskColor(riskData.risk_score))
-            .text(` — ${weightPct}`)
-            .moveDown(0.3);
+            .moveTo(doc.page.margins.left, y)
+            .lineTo(doc.page.margins.left + pageWidth, y)
+            .stroke(ACCENT);
 
-          doc
-            .fillColor('#2C3E50')
-            .fontSize(10)
-            .text(`   Описание влияния: ${f.impact_description}`)
-            .moveDown(0.7);
-
-          doc.fontSize(12);
-        }
-
-        doc.moveDown(1);
-
-        // ── SUMMARY ─
+        /* ───────────────────────── HEADER ───────────────────────── */
+        const titleStartY = doc.y;
+        // ширина текста заголовка учитывает логотип + отступы
+        const titleBoxW = pageWidth - LOGO_W - LOGO_PAD_R;
         doc
           .font('Bold')
-          .fontSize(14)
-          .fillColor('#2C3E50')
-          .text('4. Краткое резюме')
-          .moveDown(0.5)
-          .font('Regular')
-          .fontSize(12)
-          .fillColor('#2C3E50')
-          .text(riskData.summary, { align: 'justify' })
-          .moveDown(1.5);
-
-        // ── RECOMMENDATIONS ─
-        doc
-          .font('Bold')
-          .fontSize(14)
-          .fillColor('#2C3E50')
-          .text('5. Рекомендации')
-          .moveDown(0.5)
-          .font('Regular')
-          .fontSize(12);
-
-        for (const rec of riskData.recommendations) {
-          doc
-            .circle(doc.x - 6, doc.y + 6, 3)
-            .fill(this.getRiskColor(riskData.risk_score))
-            .fillColor('#2C3E50')
-            .text(`  ${rec}`)
-            .moveDown(0.5);
-        }
-
-        doc.moveDown(1);
-
-        // ── FOLLOW-UP TESTS ─
-        doc
-          .font('Bold')
-          .fontSize(14)
-          .fillColor('#2C3E50')
-          .text('6. Рекомендуемые обследования')
-          .moveDown(0.5)
-          .font('Regular')
-          .fontSize(12);
-
-        for (const test of riskData.follow_up_tests) {
-          doc.text(`• ${test}`).moveDown(0.3);
-        }
-
-        doc.moveDown(1.5);
-
-        // ── FOOTER ─
-        const bottom = doc.page.height - 40;
-        doc
-          .fontSize(10)
-          .fillColor('#95A5A6')
-          .text(
-            `Сгенерировано: ${new Date(riskData.generated_at).toLocaleString('ru-RU')}`,
-            72,
-            bottom,
-            {
-              continued: true,
-            },
-          )
-          .text(` – Страница ${doc.page.number}`, {
-            align: 'right',
-            width: doc.page.width - 144,
+          .fontSize(16)
+          .text('Зерттеу нәтижесі / Результат исследования', {
+            width: titleBoxW,
           });
 
+        // логотип, поднятый над базовой линией, с правым отступом
+        if (fs.existsSync(this.logo)) {
+          doc.image(
+            this.logo,
+            doc.page.width - doc.page.margins.right - LOGO_W - LOGO_PAD_R,
+            titleStartY - LOGO_PAD_TOP,
+            {
+              width: LOGO_W,
+            },
+          );
+        }
+
+        drawLine(doc.y + 6);
+        doc.moveDown(1);
+
+        /* ───────────── PATIENT & META INFO ───────────── */
+        const translateGender = (g?: string) => {
+          const v = (g || '').toLowerCase();
+          if (['мужской', 'male', 'm'].includes(v)) return 'Мужской / Ер';
+          if (['женский', 'female', 'f'].includes(v)) return 'Женский / Әйел';
+          return g ?? '—';
+        };
+
+        const leftPairs: Array<[string, string]> = [
+          ['Пациент / Науқас', userData.full_name ?? `ID ${userId}`],
+          ['Номер пациента / Пациент нөмірі', `№${userId}`],
+          ['Пол / Жынысы', translateGender(userData.gender)],
+        ];
+        const now = new Date(riskData.generated_at);
+        const rightPairs: Array<[string, string]> = [
+          ['Дата взятия / Алу күні', now.toLocaleDateString('ru-RU')],
+          [
+            'Время взятия / Уақыты',
+            now.toLocaleTimeString('ru-RU', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          ],
+          [
+            'Отчёт сформирован / Есеп жасалды',
+            new Intl.DateTimeFormat('ru-RU', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            }).format(now),
+          ],
+        ];
+
+        const colW = pageWidth / 2 - 10;
+        const renderPairs = (
+          pairs: [string, string][],
+          x: number,
+          y: number,
+        ) => {
+          pairs.forEach(([l, v]) => {
+            doc
+              .font('Regular')
+              .fontSize(10)
+              .fillColor('#424242')
+              .text(`${l}: `, x, y, { continued: true });
+            doc.font('Bold').fillColor('#000').text(v);
+            y += 14;
+          });
+          return y;
+        };
+
+        const infoY = doc.y;
+        const leftEndY = renderPairs(leftPairs, doc.page.margins.left, infoY);
+        renderPairs(rightPairs, doc.page.margins.left + colW + 20, infoY);
+        doc.y = Math.max(leftEndY, doc.y) + 8;
+        drawLine(doc.y);
+        doc.moveDown(0.8);
+
+        /* ───────────────────────── TABLE ───────────────────────── */
+        const headers = ['Көрсеткіш / Показатель', 'Категория', 'Описание'];
+        const colWidths = [
+          pageWidth * 0.28,
+          pageWidth * 0.18,
+          pageWidth * 0.54,
+        ];
+        const rows: string[][] = [
+          [
+            'Общий риск',
+            riskData.risk_level,
+            `Суммарный индекс вероятности составляет ${riskData.risk_score} % (категория – ${riskData.risk_category}).`,
+          ],
+          ...riskData.risk_factors.map((f) => [
+            f.label,
+            this.translateSource(f.source),
+            f.impact_description,
+          ]),
+        ];
+
+        const renderRow = (
+          cells: string[],
+          y: number,
+          header = false,
+          shaded = false,
+        ) => {
+          const heights = cells.map((c, i) => {
+            doc.font(header ? 'Bold' : 'Regular').fontSize(9);
+            return doc.heightOfString(c, { width: colWidths[i] - 12 });
+          });
+          const h = Math.max(...heights) + 12;
+          let x = doc.page.margins.left;
+          cells.forEach((_c, i) => {
+            doc
+              .rect(x, y, colWidths[i], h)
+              .fill(header ? ACCENT : shaded ? GREY_BG : '#FFFFFF')
+              .stroke('#BDBDBD');
+            x += colWidths[i];
+          });
+          x = doc.page.margins.left;
+          cells.forEach((c, i) => {
+            doc
+              .font(header ? 'Bold' : 'Regular')
+              .fontSize(9)
+              .fillColor(header ? '#FFFFFF' : '#000')
+              .text(c, x + 6, y + 6, {
+                width: colWidths[i] - 12,
+                align: i === 2 ? 'left' : 'center',
+              });
+            x += colWidths[i];
+          });
+          return y + h;
+        };
+
+        let yPos = doc.y;
+        yPos = renderRow(headers, yPos, true);
+        rows.forEach((r, i) => (yPos = renderRow(r, yPos, false, i % 2 === 0)));
+        doc.y = yPos + 12;
+
+        /* ───────────────────────── TEXT SECTIONS ───────────────────────── */
+        const writeSection = (title: string, body: string | string[]) => {
+          doc.x = doc.page.margins.left;
+          doc.font('Bold').fontSize(11).text(title, { underline: true });
+          doc.moveDown(0.4);
+          if (Array.isArray(body)) {
+            body.forEach((b) => {
+              doc.circle(doc.x - 4, doc.y + 4.5, 2).fill(ACCENT);
+              doc
+                .font('Regular')
+                .fontSize(10)
+                .fillColor('#000')
+                .text('  ' + b);
+            });
+          } else {
+            doc.font('Regular').fontSize(10).text(body, { align: 'justify' });
+          }
+          doc.moveDown(0.8);
+        };
+
+        writeSection('Резюме / Қорытынды', riskData.summary);
+        writeSection('Рекомендации / Ұсынымдар', riskData.recommendations);
+        writeSection(
+          'Рекомендуемые обследования / Ұсынылатын тексерулер',
+          riskData.follow_up_tests,
+        );
+
+        /* ───────────────────────── FOOTER ───────────────────────── */
+        const footerY = doc.page.height - doc.page.margins.bottom + 14;
+        drawLine(footerY - 10);
+
         doc.end();
-        stream.once('finish', () => resolve(filepath));
-        stream.once('error', reject);
+        stream.on('finish', () => resolve(filepath));
+        stream.on('error', reject);
       } catch (err) {
         reject(err);
       }
     });
   }
-
-  private getRiskColor(score: number): string {
-    if (score > 0.7) return '#E74C3C'; // red
-    if (score > 0.4) return '#E67E22'; // orange
-    return '#27AE60'; // green
-  }
-
-  private getRiskLevel(score: number): string {
-    if (score > 0.7) return 'Высокий';
-    if (score > 0.4) return 'Средний';
-    return 'Низкий';
-  }
-
   private translateSource(source: string): string {
     const map: Record<string, string> = {
       SkinCheck: 'Анализ кожи',
       Anxiety: 'Тревожность',
       MedicalAnalyses: 'Анализ крови',
+      MedicalAnalysis: 'Мед. анализ',
       BloodPressure: 'Артериальное давление',
       Cholesterol: 'Холестерин',
+      MedicalHistory: 'Мед. история',
+      PersonalData: 'Анкета',
     };
     return map[source] || source;
   }
