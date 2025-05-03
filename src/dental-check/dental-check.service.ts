@@ -78,6 +78,13 @@ export class DentalCheckService {
     }
   }
 
+  async getHistory(userId: number) {
+    return this.prisma.dentalCheck.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   private async generateGradcam(imagePath: string): Promise<string | null> {
     const scriptPath = path.join(process.cwd(), 'script', 'gradcam.js');
     try {

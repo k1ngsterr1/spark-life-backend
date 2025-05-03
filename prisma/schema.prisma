@@ -27,8 +27,6 @@ enum NotificationType {
   other
 }
 
-
-
 enum RecurrencePattern {
   daily
   weekdays
