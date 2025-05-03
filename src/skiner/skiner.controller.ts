@@ -2,6 +2,7 @@
 
 import {
   Controller,
+  Get,
   Post,
   Request,
   UploadedFile,
@@ -70,7 +71,21 @@ export class SkiniverController {
     };
   }
 
-  // 🆕 GRADCAM-ONLY ENDPOINT
+  @Get('history')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get user skin check history' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of previous skin checks',
+  })
+  async getHistory(@Request() req) {
+    const history = await this.skiniverService.getSkinCheckHistory(req.user.id);
+    return {
+      status: 'ok',
+      history,
+    };
+  }
+
   @Post('gradcam')
   @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(FileInterceptor('img'))

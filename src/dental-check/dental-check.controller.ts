@@ -5,6 +5,7 @@ import {
   UploadedFile,
   UseGuards,
   Request,
+  Get,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DentalCheckService } from './dental-check.service';
@@ -46,5 +47,12 @@ export class DentalCheckController {
     const base64Url = `data:${mimeType};base64,${base64}`;
 
     return this.dentalCheckService.analyze(req.user.id, base64Url);
+  }
+
+  @Get('history')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'История анализов зубов пользователя' })
+  async getHistory(@Request() req) {
+    return this.dentalCheckService.getHistory(req.user.id);
   }
 }

@@ -71,6 +71,13 @@ export class SkiniverService {
     });
   }
 
+  async getSkinCheckHistory(userId: number) {
+    return this.prisma.skinCheck.findMany({
+      where: { user_id: userId },
+      orderBy: { check_datetime: 'desc' },
+    });
+  }
+
   async generateGradcam(imagePath: string): Promise<string | null> {
     const scriptPath = path.join(process.cwd(), 'script', 'gradcam.js');
 
