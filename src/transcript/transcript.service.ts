@@ -60,4 +60,16 @@ export class TranscriptService {
       },
     });
   }
+
+  async getLatestTranscript() {
+    const latest = await this.prisma.transcript.findFirst();
+
+    if (!latest) {
+      throw new Error('No transcripts found');
+    }
+
+    return {
+      file_path: latest.file_path,
+    };
+  }
 }

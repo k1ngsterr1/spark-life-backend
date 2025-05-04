@@ -80,4 +80,10 @@ export class TranscriptController {
   ) {
     return this.transcriptService.getTranscripts(patient_id, doctor_id);
   }
+
+  @Get('last')
+  @ApiOperation({ summary: 'Get latest generated transcript PDF' })
+  async getLastTranscript() {
+    return this.transcriptService.getLatestTranscript();
+  }
 }
