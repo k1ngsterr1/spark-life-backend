@@ -62,11 +62,10 @@ model User {
   appointments        Appointment[]         @relation("UserAppointments")
   dentalChecks        DentalCheck[]         @relation("UserDentalChecks")
 
-  riskProfile    RiskProfile?     @relation("UserRiskProfile")
-  medicalAnalyses MedicalAnalysis[] @relation("UserMedicalAnalyses")
   riskProfile         RiskProfile?          @relation("UserRiskProfile")
   medicalAnalyses     MedicalAnalysis[]     @relation("UserMedicalAnalyses")
 }
+
 
 model RiskProfile {
   id           Int      @id @default(autoincrement())
@@ -124,6 +123,18 @@ model DetailedSkinCheck {
 
   @@index([user_id])
 }
+
+model UserDetailedSkinCheck {
+  id                 Int                @id @default(autoincrement())
+  userId             Int
+  detailedSkinCheckId Int
+
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  detailedSkinCheck  DetailedSkinCheck  @relation(fields: [detailedSkinCheckId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, detailedSkinCheckId])
+}
+
 
 model DentalCheck {
   id          Int      @id @default(autoincrement())

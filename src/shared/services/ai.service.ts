@@ -260,11 +260,7 @@ User question:
 
     // 3. Инициализируем Google TTS клиент с временным файлом
     const client = new textToSpeech.TextToSpeechClient({
-<<<<<<< HEAD
-      keyFilename: path.join(process.cwd(), 'keys/tts-key.json'),
-=======
       keyFilename: tmpKeyFile.name,
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
     });
 
     // 4. Формируем запрос
@@ -724,7 +720,6 @@ ${JSON.stringify(result.predictions, null, 2)}
     );
     return parsed;
   }
-<<<<<<< HEAD
   async generateShortTextRecommendation(
     text: string,
   ): Promise<ShortSummartyOfAudioData> {
@@ -778,6 +773,4 @@ ${JSON.stringify(result.predictions, null, 2)}
     if (!text) throw new HttpException('Не удалось расшифровать аудио', 500);
     return text;
   }
-=======
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
 }

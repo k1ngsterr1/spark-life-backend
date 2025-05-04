@@ -1,5 +1,3 @@
-//test
-
 import {
   Controller,
   Get,
@@ -58,6 +56,7 @@ export class SkiniverController {
     const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
     fs.mkdirSync(uploadDir, { recursive: true });
     fs.writeFileSync(filePath, file.buffer);
+
     const result = await this.skiniverService.predict(file);
     const gradcamPath = await this.skiniverService.generateGradcam(filePath);
     await this.skiniverService.saveSkinCheck(req.user.id, result);
@@ -66,37 +65,11 @@ export class SkiniverController {
       status: 'ok',
       result,
       gradcam: gradcamPath
-        ? `https://spark-life-backend-production-d81a.up.railway.app/uploads/${path.basename(gradcamPath)}`
+        ? `https://yourdomain.com/uploads/${path.basename(gradcamPath)}`
         : null,
     };
   }
 
-<<<<<<< HEAD
-  @Get('history')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get user skin check history' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of previous skin checks',
-  })
-  async getHistory(@Request() req) {
-    const history = await this.skiniverService.getSkinCheckHistory(req.user.id);
-    return {
-      status: 'ok',
-      history,
-    };
-  }
-
-  @Post('gradcam')
-  @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(FileInterceptor('img'))
-  @ApiOperation({
-    summary: 'Generate a simulated Grad-CAM from uploaded image',
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Image file to create Grad-CAM visualization',
-=======
   @Post('predict-detailed')
   @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(FileInterceptor('img'))
@@ -106,7 +79,6 @@ export class SkiniverController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Image file for detailed skin analysis',
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
     schema: {
       type: 'object',
       properties: {
@@ -119,27 +91,6 @@ export class SkiniverController {
   })
   @ApiResponse({
     status: 200,
-<<<<<<< HEAD
-    description: 'Simulated Grad-CAM overlay result',
-    content: {
-      'application/json': {
-        example: {
-          status: 'ok',
-          gradcam:
-            'https://yourdomain.com/uploads/upload_123456789_gradcam.jpg',
-        },
-      },
-    },
-  })
-  async generateGradcam(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new Error('Файл не загружен');
-
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
-    fs.mkdirSync(uploadDir, { recursive: true });
-    fs.writeFileSync(filePath, file.buffer);
-
-=======
     description: 'Prediction result from Detailed Skiniver AI',
   })
   async predictDetailed(
@@ -152,27 +103,13 @@ export class SkiniverController {
     const filePath = path.join(uploadDir, `upload_${Date.now()}.jpg`);
     fs.mkdirSync(uploadDir, { recursive: true });
     fs.writeFileSync(filePath, file.buffer);
+
     const result = await this.skiniverService.predict(file);
     await this.skiniverService.saveDetailedSkinCheck(req.user.id, result);
 
     return {
       status: 'ok',
       result,
-    };
-  }
-
-  @Get('history')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get user skin check history' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of previous skin checks',
-  })
-  async getHistory(@Request() req) {
-    const history = await this.skiniverService.getSkinCheckHistory(req.user.id);
-    return {
-      status: 'ok',
-      history,
     };
   }
 
@@ -216,7 +153,6 @@ export class SkiniverController {
     fs.mkdirSync(uploadDir, { recursive: true });
     fs.writeFileSync(filePath, file.buffer);
 
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
     const gradcamPath = await this.skiniverService.generateGradcam(filePath);
 
     return {
@@ -224,6 +160,38 @@ export class SkiniverController {
       gradcam: gradcamPath
         ? `https://yourdomain.com/uploads/${path.basename(gradcamPath)}`
         : null,
+    };
+  }
+
+  @Get('history-detailed')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get user detailed skin check history' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of previous detailed skin checks',
+  })
+  async getDetailedHistory(@Request() req) {
+    const history = await this.skiniverService.getDetailedSkinCheckHistory(
+      req.user.id,
+    );
+    return {
+      status: 'ok',
+      history,
+    };
+  }
+
+  @Get('history')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get user skin check history' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of previous skin checks',
+  })
+  async getHistory(@Request() req) {
+    const history = await this.skiniverService.getSkinCheckHistory(req.user.id);
+    return {
+      status: 'ok',
+      history,
     };
   }
 }

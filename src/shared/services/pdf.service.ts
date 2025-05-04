@@ -18,14 +18,11 @@ export interface ExtendedRiskProfileData {
   follow_up_tests: string[];
   generated_at: string;
 }
-<<<<<<< HEAD
 interface ShortSummaryOfAudioData {
   summary: string;
   recommendations: string[];
   generated_at: string;
 }
-=======
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
 
 @Injectable()
 export class PdfGeneratorService {
@@ -285,7 +282,6 @@ export class PdfGeneratorService {
     };
     return map[source] || source;
   }
-<<<<<<< HEAD
   async generateShortSummary(
     userData: {
       full_name?: string;
@@ -407,6 +403,4 @@ export class PdfGeneratorService {
       }
     });
   }
-=======
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
 }

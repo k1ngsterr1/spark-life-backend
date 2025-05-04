@@ -71,8 +71,6 @@ export class SkiniverService {
     });
   }
 
-<<<<<<< HEAD
-=======
   async saveDetailedSkinCheck(userId: number, skiniveResult: any) {
     return this.prisma.detailedSkinCheck.create({
       data: {
@@ -99,7 +97,17 @@ export class SkiniverService {
     });
   }
 
->>>>>>> 74f573f60837932b33724da410bc634a6f05a338
+  async getDetailedSkinCheckHistory(userId: number) {
+    return this.prisma.detailedSkinCheck.findMany({
+      where: {
+        user_id: userId, // исправлено с userId на user_id
+      },
+      orderBy: {
+        check_datetime: 'desc',
+      },
+    });
+  }
+
   async getSkinCheckHistory(userId: number) {
     return this.prisma.skinCheck.findMany({
       where: { user_id: userId },
