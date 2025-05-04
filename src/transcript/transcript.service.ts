@@ -12,6 +12,7 @@ export class TranscriptService {
     private aiService: AIService,
     private pdfService: PdfGeneratorService,
   ) {}
+
   async transcribe(
     file: Express.Multer.File,
     patient_id: number,
@@ -41,11 +42,14 @@ export class TranscriptService {
       parsed,
       doctor,
     );
+
+    const fullUrl = `https://spark-life-backend-production-d81a.up.railway.app/${pdfFilePath}`;
+
     await this.prisma.transcript.create({
       data: {
         patient_id: patient_id,
         doctor_id: doctor_id,
-        file_path: pdfFilePath,
+        file_path: fullUrl,
       },
     });
 
