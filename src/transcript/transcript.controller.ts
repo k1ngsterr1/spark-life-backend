@@ -12,13 +12,7 @@ import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import * as path from 'path';
 import * as fs from 'fs';
 import { TranscriptService } from './transcript.service';
-
-interface UploadDto {
-  /** ID пациента */
-  patient_id: number;
-  /** ID врача (кто загружает) */
-  doctor_id: number;
-}
+import { UploadDto } from './dto/upload-file.dto';
 
 @ApiTags('Transcription')
 @Controller('transcript')
@@ -45,13 +39,13 @@ export class TranscriptController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const uploadPath = path.join(process.cwd(), 'uploads', 'transcript');
+          const uploadPath = path.join(process.cwd(), 'uploads');
           fs.mkdirSync(uploadPath, { recursive: true });
           cb(null, uploadPath);
         },
         filename: (_req, file, cb) => {
           const ext = path.extname(file.originalname);
-          cb(null, `file${ext}`); // → uploads/transcript/file.wav
+          cb(null, `file-${Date.now()}${ext}`); // → uploads/transcript/file.wav
         },
       }),
       fileFilter: (_req, file, cb) => {
@@ -69,7 +63,6 @@ export class TranscriptController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<{ text: string }> {
     if (!file) throw new HttpException('No file uploaded', 400);
-
     return this.transcriptService.transcribe(
       file,
       body.patient_id,

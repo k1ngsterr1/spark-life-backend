@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Doctor } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -21,6 +22,8 @@ export interface ExtendedRiskProfileData {
 interface ShortSummaryOfAudioData {
   summary: string;
   recommendations: string[];
+  conclusion: string;
+  symptoms: string[];
   generated_at: string;
 }
 
@@ -292,14 +295,19 @@ export class PdfGeneratorService {
       diseases?: string[];
     },
     data: ShortSummaryOfAudioData,
+    doctor: Doctor,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
+        /* ---------- CONSTANTS ---------- */
         const ACCENT = '#2297E4';
         const LOGO_W = 42;
         const LOGO_PAD_R = 6;
         const LOGO_PAD_TOP = 20;
+        const PHOTO_W = 64;
+        const PHOTO_PAD = 10;
 
+        /* ---------- PREP ---------- */
         const doc = new PDFDocument({
           size: 'A4',
           margins: { top: 36, left: 36, right: 36, bottom: 36 },
@@ -311,7 +319,7 @@ export class PdfGeneratorService {
         const stream = fs.createWriteStream(filePath);
         doc.pipe(stream);
 
-        // fonts
+        // Fonts
         doc.registerFont('Regular', this.fontRegular);
         doc.registerFont('Bold', this.fontBold);
 
@@ -323,34 +331,38 @@ export class PdfGeneratorService {
             .lineTo(doc.page.margins.left + pageWidth, y)
             .stroke(ACCENT);
 
-        /* HEADER */
-        const titleStartY = doc.y;
-        const titleBoxW = pageWidth - LOGO_W - LOGO_PAD_R;
+        /* ---------- HEADER ---------- */
+        const headerStartY = doc.y;
+        const headerTextWidth = pageWidth - LOGO_W - LOGO_PAD_R;
         doc
           .font('Bold')
           .fontSize(16)
           .text('Краткий аудио‑отчёт / Қысқаша дыбыстық есеп', {
-            width: titleBoxW,
+            width: headerTextWidth,
           });
-        if (fs.existsSync(this.logo)) {
+
+        // Logo (optional)
+        if (this.logo && fs.existsSync(this.logo)) {
           doc.image(
             this.logo,
             doc.page.width - doc.page.margins.right - LOGO_W - LOGO_PAD_R,
-            titleStartY - LOGO_PAD_TOP,
+            headerStartY - LOGO_PAD_TOP,
             { width: LOGO_W },
           );
         }
+
         drawLine(doc.y + 6);
         doc.moveDown(1);
 
-        /* PATIENT INFO */
+        /* ---------- PATIENT SECTION ---------- */
         const translateGender = (g?: string) => {
           const v = (g || '').toLowerCase();
           if (['мужской', 'male', 'm'].includes(v)) return 'Мужской / Ер';
           if (['женский', 'female', 'f'].includes(v)) return 'Женский / Әйел';
           return g ?? '—';
         };
-        const pairs: Array<[string, string]> = [
+
+        const patientPairs: Array<[string, string]> = [
           ['Пациент / Науқас', userData.full_name ?? '—'],
           ['Пол / Жынысы', translateGender(userData.gender)],
           [
@@ -358,24 +370,38 @@ export class PdfGeneratorService {
             new Date(data.generated_at).toLocaleString('ru-RU'),
           ],
         ];
-        pairs.forEach(([l, v]) => {
+
+        if (userData.birthDate)
+          patientPairs.push(['Дата рождения', userData.birthDate]);
+        if (userData.height)
+          patientPairs.push(['Рост', `${userData.height} см`]);
+        if (userData.weight)
+          patientPairs.push(['Вес', `${userData.weight} кг`]);
+
+        patientPairs.forEach(([label, value]) => {
           doc
             .font('Regular')
             .fontSize(10)
             .fillColor('#424242')
-            .text(`${l}: `, { continued: true });
-          doc.font('Bold').fillColor('#000').text(v);
+            .text(`${label}: `, { continued: true });
+          doc.font('Bold').fillColor('#000').text(value);
           doc.moveDown(0.2);
         });
         doc.moveDown(0.6);
 
-        /* SUMMARY SECTION */
-        const writeSection = (title: string, body: string | string[]) => {
+        /* ---------- CONTENT SECTIONS ---------- */
+        const writeSection = (
+          title: string,
+          body: string | string[],
+          bullet: boolean = false,
+        ) => {
           doc.font('Bold').fontSize(11).text(title, { underline: true });
           doc.moveDown(0.4);
           if (Array.isArray(body)) {
             body.forEach((b) => {
-              doc.circle(doc.x - 4, doc.y + 4.5, 2).fill(ACCENT);
+              if (bullet) {
+                doc.circle(doc.x - 4, doc.y + 4.5, 2).fill(ACCENT);
+              }
               doc
                 .font('Regular')
                 .fontSize(10)
@@ -389,12 +415,65 @@ export class PdfGeneratorService {
         };
 
         writeSection('Резюме / Қорытынды', data.summary);
-        writeSection('Рекомендации / Ұсынымдар', data.recommendations);
+        writeSection('Симптомы / Симптомдар', data.symptoms, true);
+        writeSection('Заключение / Қорытынды', data.conclusion);
+        writeSection('Рекомендации / Ұсынымдар', data.recommendations, true);
 
-        /* FOOTER */
+        /* ---------- DOCTOR SECTION ---------- */
+        drawLine(doc.y);
+        doc.moveDown(0.6);
+
+        const doctorHeaderY = doc.y;
+        const doctorTextWidth = pageWidth - PHOTO_W - PHOTO_PAD;
+
+        doc
+          .font('Bold')
+          .fontSize(11)
+          .text('Врач / Дәрігер', { underline: true });
+        doc.moveDown(0.4);
+
+        const docInfoPairs: Array<[string, string]> = [
+          ['ФИО', doctor.name],
+          ['Специализация', doctor.specialty],
+          ['Опыт', doctor.experience],
+          [
+            'Рейтинг',
+            `${doctor.rating.toFixed(1)} / 5 (${doctor.review_count} отзывов)`,
+          ],
+        ];
+        doc.font('Regular').fontSize(10);
+        docInfoPairs.forEach(([l, v]) => {
+          doc
+            .fillColor('#424242')
+            .text(`${l}: `, { continued: true, width: doctorTextWidth });
+          doc.fillColor('#000').font('Bold').text(v);
+        });
+
+        // education & languages
+        doc.moveDown(0.4);
+        if (doctor.education?.length) {
+          writeSection('Образование', doctor.education, true);
+        }
+        if (doctor.languages?.length) {
+          writeSection('Языки', doctor.languages.join(', '));
+        }
+
+        /* ---------- FOOTER ---------- */
         const footerY = doc.page.height - doc.page.margins.bottom + 14;
         drawLine(footerY - 10);
 
+        doc
+          .font('Regular')
+          .fontSize(8)
+          .fillColor('#666')
+          .text(
+            'Данный отчёт носит информационный характер и не заменяет очный осмотр специалиста.',
+            doc.page.margins.left,
+            footerY,
+            { width: pageWidth, align: 'center' },
+          );
+
+        /* ---------- FINALIZE ---------- */
         doc.end();
         stream.on('finish', () => resolve(filePath));
         stream.on('error', reject);

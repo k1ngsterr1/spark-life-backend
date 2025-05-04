@@ -18,6 +18,7 @@ export class SpeechToTextService {
   async transcribeAudio(file: Express.Multer.File): Promise<string> {
     try {
       const uploadsDir = join(__dirname, '..', 'uploads');
+      console.log(uploadsDir);
 
       try {
         await fs.access(uploadsDir);
@@ -25,20 +26,13 @@ export class SpeechToTextService {
         await fs.mkdir(uploadsDir, { recursive: true });
       }
 
-      const tempFilePath = join(
-        uploadsDir,
-        `${Date.now()}-${file.originalname}`,
-      );
-
-      await fs.writeFile(tempFilePath, file.buffer);
-
       const transcription = await this.client.audio.transcriptions.create({
-        file: createReadStream(tempFilePath),
+        file: createReadStream(file.path),
         model: 'whisper-1',
         language: 'ru',
       });
 
-      await fs.unlink(tempFilePath);
+      await fs.unlink(file.path);
 
       return transcription.text;
     } catch (error) {

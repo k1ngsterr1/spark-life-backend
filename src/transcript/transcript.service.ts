@@ -20,6 +20,7 @@ export class TranscriptService {
     const user = await this.prisma.user.findUnique({
       where: { id: patient_id },
     });
+    console.log(file);
     const text = await this.speechToText.transcribeAudio(file);
 
     const userDataForPdf = {
@@ -30,11 +31,15 @@ export class TranscriptService {
       weight: user.weight?.toNumber() || null,
       diseases: user.diseases,
     };
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { id: doctor_id },
+    });
 
     const parsed = await this.aiService.generateShortTextRecommendation(text);
     const pdfFilePath = await this.pdfService.generateShortSummary(
       userDataForPdf,
       parsed,
+      doctor,
     );
     await this.prisma.transcript.create({
       data: {

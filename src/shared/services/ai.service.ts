@@ -43,6 +43,8 @@ interface ExtendedRiskProfileData {
 interface ShortSummartyOfAudioData {
   summary: string;
   recommendations: string[];
+  conclusion: string;
+  symptoms: string[];
   generated_at: string;
 }
 
@@ -731,7 +733,8 @@ ${JSON.stringify(result.predictions, null, 2)}
 {     
   "summary": string,     
   "recommendations": [string],
-  "generated_at": string       // текущий ISO timestamp
+  "conclusion": string,
+  "symptoms": [string]
 }
 `.trim();
 
@@ -759,6 +762,16 @@ ${JSON.stringify(result.predictions, null, 2)}
         `Failed to parse JSON: ${e.message}\n\nResponse:\n${content}`,
       );
     }
+    const generatedAt = new Date().toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+
+    parsed.generated_at = generatedAt;
     return parsed;
   }
 
