@@ -5,6 +5,8 @@ import {
   UseInterceptors,
   HttpException,
   Body,
+  Get,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -68,5 +70,14 @@ export class TranscriptController {
       body.patient_id,
       body.doctor_id, // ← передаём именно doctor_id
     );
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all transcripts by patient_id or doctor_id' })
+  async getTranscripts(
+    @Query('patient_id') patient_id?: number,
+    @Query('doctor_id') doctor_id?: number,
+  ) {
+    return this.transcriptService.getTranscripts(patient_id, doctor_id);
   }
 }

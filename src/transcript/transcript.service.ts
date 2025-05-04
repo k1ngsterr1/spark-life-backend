@@ -51,4 +51,13 @@ export class TranscriptService {
 
     return { text: text };
   }
+
+  async getTranscripts(patient_id?: number, doctor_id?: number) {
+    return this.prisma.transcript.findMany({
+      where: {
+        ...(patient_id ? { patient_id: Number(patient_id) } : {}),
+        ...(doctor_id ? { doctor_id: Number(doctor_id) } : {}),
+      },
+    });
+  }
 }
