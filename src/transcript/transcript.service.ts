@@ -43,7 +43,8 @@ export class TranscriptService {
       doctor,
     );
 
-    const fullUrl = `https://spark-life-backend-production-d81a.up.railway.app${pdfFilePath.startsWith('/') ? '' : '/'}${pdfFilePath}`;
+    const rawPath = pdfFilePath.replace(/^\/?app/, '');
+    const fullUrl = `https://spark-life-backend-production-d81a.up.railway.app${rawPath.startsWith('/') ? '' : '/'}${rawPath}`;
 
     await this.prisma.transcript.create({
       data: {
