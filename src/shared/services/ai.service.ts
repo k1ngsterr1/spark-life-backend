@@ -253,14 +253,15 @@ User question:
 
   private async synthesizeSpeech(text: string): Promise<string> {
     // 1. Получаем JSON-строку из переменной окружения
-    const keyJson = JSON.parse(process.env.KEY!);
-    keyJson.private_key = keyJson.private_key.replace(/\\n/g, '\n'); // обязательно!
+    const base64 = process.env.KEY;
+    if (!base64) throw new Error('No GOOGLE_KEY_BASE64 provided');
 
-    // 2. Создаём временный файл и записываем ключ туда
+    const keyJson = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+    keyJson.private_key = keyJson.private_key.replace(/\\n/g, '\n');
+
     const tmpKeyFile = tmp.fileSync({ postfix: '.json' });
     fs.writeFileSync(tmpKeyFile.name, JSON.stringify(keyJson));
 
-    // 3. Инициализируем Google TTS клиент с временным файлом
     const client = new textToSpeech.TextToSpeechClient({
       keyFilename: tmpKeyFile.name,
     });
