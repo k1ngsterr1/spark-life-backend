@@ -7,7 +7,7 @@ import {
   Request,
   Get,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { DentalCheckService } from './dental-check.service';
 import {
   ApiTags,
@@ -17,6 +17,8 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @ApiTags('Dental Check')
 @Controller('dental-check')
@@ -26,7 +28,19 @@ export class DentalCheckController {
 
   @Post('analyze')
   @UseGuards(AuthGuard('jwt'))
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FilesInterceptor('file', 1, {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `teeth-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
   @ApiOperation({ summary: 'Анализ зубов по изображению через Roboflow + AI' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
