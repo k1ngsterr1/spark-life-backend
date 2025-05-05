@@ -29,7 +29,7 @@ export class DentalCheckController {
   @Post('analyze')
   @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(
-    FilesInterceptor('file', 1, {
+    FileInterceptor('file', {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, cb) => {
