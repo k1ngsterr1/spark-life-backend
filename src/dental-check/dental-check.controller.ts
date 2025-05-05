@@ -17,7 +17,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
 import { extname } from 'path';
 
 @ApiTags('Dental Check')
@@ -30,15 +30,7 @@ export class DentalCheckController {
   @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `teeth-${uniqueSuffix}${ext}`);
-        },
-      }),
+      storage: memoryStorage(),
     }),
   )
   @ApiOperation({ summary: 'Анализ зубов по изображению через Roboflow + AI' })
