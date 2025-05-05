@@ -5,7 +5,7 @@ import {
   UseInterceptors,
   Req,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { SpeechToTextService } from './speech-to-text.service';
 import {
   ApiConsumes,
@@ -17,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @ApiTags('Speech-to-Text')
 @Controller('speech-to-text')
@@ -27,7 +29,19 @@ export class SpeechToTextController {
   ) {}
 
   @Post('analyze-anxiety')
-  @UseInterceptors(FilesInterceptor('audios'))
+  @UseInterceptors(
+    FileInterceptor('audios', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Analyze user anxiety level based on three answers',
