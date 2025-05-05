@@ -30,7 +30,7 @@ export class SpeechToTextController {
 
   @Post('analyze-anxiety')
   @UseInterceptors(
-    FileInterceptor('audios', {
+    FilesInterceptor('audios', 3, {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, cb) => {
@@ -73,10 +73,7 @@ export class SpeechToTextController {
       },
     },
   })
-  async analyzeAnxiety(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Req() req: Request,
-  ) {
+  async analyzeAnxiety(@UploadedFiles() files: any[], @Req() req: Request) {
     if (!files || files.length !== 3) {
       throw new Error('Необходимо загрузить ровно 3 аудиофайла с ответами.');
     }
